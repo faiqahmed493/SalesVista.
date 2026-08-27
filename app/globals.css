@@ -1,26 +1,121 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+/* ─── CSS design tokens ──────────────────────────────────────────────────── */
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+:root {
+  /* Page & text */
+  --background: #f8fafc;
+  --foreground: #0f172a;
+
+  /* Card surfaces */
+  --card: #ffffff;
+  --card-foreground: #0f172a;
+
+  /* Borders */
+  --border: #e2e8f0;
+
+  /* Secondary / muted */
+  --muted: #f1f5f9;
+  --muted-foreground: #64748b;
+
+  /* Accent */
+  --accent: #2563eb;
+  --accent-foreground: #ffffff;
+
+  /* Status */
+  --destructive: #ef4444;
+  --destructive-foreground: #ffffff;
+
+  /* Chart color palette */
+  --chart-blue: #3b82f6;
+  --chart-purple: #8b5cf6;
+  --chart-emerald: #10b981;
+  --chart-amber: #f59e0b;
+  --chart-sky: #38bdf8;
+  --chart-teal: #14b8a6;
+  --chart-indigo: #818cf8;
+  --chart-rose: #fb7185;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --background: #09090b;
+    --foreground: #fafafa;
+
+    --card: #111113;
+    --card-foreground: #fafafa;
+
+    --border: #1f1f23;
+
+    --muted: #18181b;
+    --muted-foreground: #a1a1aa;
+
+    --accent: #3b82f6;
+    --accent-foreground: #ffffff;
+
+    --destructive: #ef4444;
+    --destructive-foreground: #ffffff;
   }
 }
+
+/* ─── Tailwind v4 theme mapping ──────────────────────────────────────────── */
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-border: var(--border);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+/* ─── Base styles ────────────────────────────────────────────────────────── */
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-geist-sans, system-ui, sans-serif);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ─── Skeleton animation ─────────────────────────────────────────────────── */
+
+@keyframes skeleton-pulse {
+  0%,
+  100% {
+    opacity: 0.4;
+  }
+  50% {
+    opacity: 0.8;
+  }
+}
+
+.skeleton {
+  background-color: var(--muted);
+  border-radius: 6px;
+  animation: skeleton-pulse 1.6s ease-in-out infinite;
+}
+
+/* ─── Recharts overrides ─────────────────────────────────────────────────── */
+
+.recharts-tooltip-wrapper {
+  outline: none !important;
+}
+
+.recharts-text {
+  font-family: var(--font-geist-sans, system-ui, sans-serif);
+}
+
+/* ─── Scrollbar (thin) ───────────────────────────────────────────────────── */
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
 }
