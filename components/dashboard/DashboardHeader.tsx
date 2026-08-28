@@ -55,8 +55,8 @@ export default function DashboardHeader({
         {/* Left: title */}
         <div style={{ display: "flex", flexDirection: "column", gap: 1 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <span style={{ fontSize: 18, fontWeight: 700, color: "var(--foreground)", letterSpacing: "-0.02em" }}>
-              Weather Analytics
+            <span style={{ fontSize: 32, fontWeight: 700, color: "var(--foreground)", letterSpacing: "-0.02em" }}>
+              Clima
             </span>
             {condition && (
               <span

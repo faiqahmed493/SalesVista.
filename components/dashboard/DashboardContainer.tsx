@@ -20,6 +20,11 @@ import {
   ForecastCardSkeleton,
   InsightSkeleton,
 } from "@/components/ui/Skeleton";
+import ChatPanel, { AskAiButton } from "@/components/chat/ChatPanel";
+import ChartRenderer from "@/components/visualization/ChartRenderer";
+import type { VisualizationPayload } from "@/lib/ai/chatTypes";
+
+const CHAT_PANEL_WIDTH = 380;
 
 interface DashboardContainerProps {
   initialData: WeatherDashboardData | null;
@@ -41,6 +46,10 @@ export default function DashboardContainer({
   const [lastRefreshed, setLastRefreshed] = useState<Date | null>(
     initialData ? new Date() : null
   );
+  const [chatOpen, setChatOpen] = useState(false);
+  const [dashboardVisualizations, setDashboardVisualizations] = useState<
+    VisualizationPayload[]
+  >([]);
 
   const fetchWeather = useCallback(
     async (locId: string, forceRefresh = false) => {
@@ -84,7 +93,23 @@ export default function DashboardContainer({
     fetchWeather(locationId, true);
   }, [fetchWeather, locationId]);
 
+  const handleAddToDashboard = useCallback(
+    (visualization: VisualizationPayload) => {
+      setDashboardVisualizations((current) =>
+        current.some(
+          (item) =>
+            item.config.title === visualization.config.title &&
+            item.config.type === visualization.config.type
+        )
+          ? current
+          : [...current, visualization]
+      );
+    },
+    []
+  );
+
   const showFullSkeleton = isLoading && !data;
+  const selectedLocation = locations.find((l) => l.id === locationId);
 
   return (
     <div style={{ minHeight: "100vh", background: "var(--background)" }}>
@@ -129,14 +154,14 @@ export default function DashboardContainer({
       {/* ── Main content ───────────────────────────────────────────────── */}
       <main
         style={{
-          maxWidth: 1400,
-          margin: "0 auto",
+          maxWidth: chatOpen ? `calc(100% - ${CHAT_PANEL_WIDTH + 16}px)` : 1400,
+          margin: chatOpen ? "0" : "0 auto",
           padding: "28px 24px 48px",
           display: "flex",
           flexDirection: "column",
           gap: 20,
           opacity: isLoading && data ? 0.55 : 1,
-          transition: "opacity 0.3s",
+          transition: "max-width 0.25s cubic-bezier(0.4,0,0.2,1), margin 0.25s, opacity 0.3s",
           pointerEvents: isLoading ? "none" : "auto",
         }}
       >
@@ -154,7 +179,7 @@ export default function DashboardContainer({
             <div
               style={{
                 display: "grid",
-                gridTemplateColumns: "repeat(2, 1fr)",
+                gridTemplateColumns: "repeat(6, 1fr)",
                 gap: 16,
               }}
               className="sm:grid-cols-3 lg:grid-cols-6"
@@ -169,7 +194,7 @@ export default function DashboardContainer({
         </section>
 
         {/* ── Section 2 + 7: Temperature Chart + Sunrise Sidebar ───── */}
-        <section
+        {/* <section
           style={{ display: "grid", gap: 20 }}
           className="grid-cols-1 lg:grid-cols-3"
           aria-label="Temperature and sun"
@@ -193,7 +218,7 @@ export default function DashboardContainer({
               <SunriseSunsetCard today={data.daily[0]!} />
             ) : null}
           </div>
-        </section>
+        </section> */}
 
         {/* ── Sections 3 & 4: Precipitation + Wind ─────────────────── */}
         <section
@@ -247,7 +272,7 @@ export default function DashboardContainer({
         </section>
 
         {/* ── Section 6: 7-Day Forecast ─────────────────────────────── */}
-        <section aria-label="7-day forecast">
+        <section aria-label="14-day forecast">
           {showFullSkeleton ? (
             <div
               style={{
@@ -258,7 +283,7 @@ export default function DashboardContainer({
               }}
             >
               <div style={{ display: "flex", gap: 12, overflowX: "hidden" }}>
-                {Array.from({ length: 7 }).map((_, i) => (
+                {Array.from({ length:7 }).map((_, i) => (
                   <ForecastCardSkeleton key={i} />
                 ))}
               </div>
@@ -267,6 +292,40 @@ export default function DashboardContainer({
             <ForecastGrid daily={data.daily} />
           ) : null}
         </section>
+
+        {dashboardVisualizations.length > 0 && (
+          <section aria-label="AI dashboard visualizations">
+            <div style={{ marginBottom: 12 }}>
+              <h2
+                style={{
+                  fontSize: 15,
+                  fontWeight: 600,
+                  color: "var(--foreground)",
+                }}
+              >
+                AI Visualizations
+              </h2>
+              <p style={{ fontSize: 11, color: "var(--muted-foreground)" }}>
+                Charts added from your AI conversations
+              </p>
+            </div>
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))",
+                gap: 20,
+              }}
+            >
+              {dashboardVisualizations.map((visualization, index) => (
+                <ChartRenderer
+                  key={`${visualization.config.title}-${index}`}
+                  config={visualization.config}
+                  data={visualization.data}
+                />
+              ))}
+            </div>
+          </section>
+        )}
 
         {/* ── Footer ────────────────────────────────────────────────── */}
         {data && (
@@ -300,6 +359,18 @@ export default function DashboardContainer({
           </footer>
         )}
       </main>
+
+      {/* ── AI Chat Panel ──────────────────────────────────────────────── */}
+      <ChatPanel
+        isOpen={chatOpen}
+        onClose={() => setChatOpen(false)}
+        data={data}
+        locationName={selectedLocation?.name ?? ""}
+        onAddToDashboard={handleAddToDashboard}
+      />
+
+      {/* ── Floating trigger (shown when panel is closed) ───────────────── */}
+      {!chatOpen && <AskAiButton onClick={() => setChatOpen(true)} />}
     </div>
   );
 }

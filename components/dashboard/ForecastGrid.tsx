@@ -169,7 +169,7 @@ export default function ForecastGrid({ daily }: ForecastGridProps) {
             marginBottom: 2,
           }}
         >
-          7-Day Forecast
+          14-Day Forecast
         </h3>
         <p style={{ fontSize: 11, color: "var(--muted-foreground)" }}>
           Daily weather summary and conditions

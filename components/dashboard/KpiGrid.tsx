@@ -184,7 +184,7 @@ export default function KpiGrid({ current, today }: KpiGridProps) {
     <div
       style={{
         display: "grid",
-        gridTemplateColumns: "repeat(2, 1fr)",
+        gridTemplateColumns: "repeat(6, 1fr)",
         gap: 16,
       }}
     >

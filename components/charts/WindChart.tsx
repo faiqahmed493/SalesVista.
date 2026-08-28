@@ -80,7 +80,7 @@ export default function WindChart({
       subtitle={`Next 24h · Avg ${avgSpeed.toFixed(0)} km/h · Max gusts ${maxGust.toFixed(0)} km/h`}
     >
       <ResponsiveContainer width="100%" height={220}>
-        <LineChart data={data} margin={{ top: 4, right: 4, left: -16, bottom: 0 }}>
+        <LineChart data={data} margin={{ top: 4, right: 4, bottom: 0 }}>
           <CartesianGrid
             strokeDasharray="4 4"
             stroke="rgba(128,128,128,0.12)"
@@ -89,12 +89,13 @@ export default function WindChart({
           <XAxis
             dataKey="time"
             interval={xAxisInterval(data.length)}
-            tick={{ fill: "var(--muted-foreground)", fontSize: 11 }}
+            tick={{ fill: "var(--muted-foreground)", fontSize: 11, dx: 30 }}
             axisLine={false}
             tickLine={false}
+            tickMargin={16}
           />
           <YAxis
-            tick={{ fill: "var(--muted-foreground)", fontSize: 11 }}
+            tick={{ fill: "var(--muted-foreground)", fontSize: 11, textAnchor: "start", dx: -26}}
             axisLine={false}
             tickLine={false}
             tickFormatter={(v) => `${v}`}
