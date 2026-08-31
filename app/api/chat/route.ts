@@ -1,30 +1,20 @@
 /**
- * Provider-independent chat route.
- *
- * Browser -> this route -> AI provider -> validated ChatApiResponse.
- * The provider and API key always remain server-side.
+ * Provider-independent chat route for Text-to-SQL Sales BI Assistant.
  */
 
 import { type NextRequest } from "next/server";
-import { getWeather } from "@/lib/data/weather/weatherService";
-import { getMockResponse } from "@/lib/ai/mockEngine";
 import { buildSystemPrompt } from "@/lib/ai/systemPrompt";
-import {
-  AI_TOOL_DEFINITIONS,
-  executeTool,
-  type ToolArgs,
-  type ToolName,
-} from "@/lib/ai/weatherDataTools";
 import { GeminiProvider } from "@/lib/ai/geminiProvider";
+import { executeSalesQuery } from "@/lib/data/sales/salesService";
 import {
   validateLLMResponse,
   reconcileVisualization,
   type ChatApiResponse,
 } from "@/lib/ai/llmResponseSchema";
+import type { DataRecord } from "@/lib/visualization/types";
 
 interface ChatRequestBody {
   message: string;
-  locationId?: string;
 }
 
 function parseBody(body: unknown): ChatRequestBody | null {
@@ -33,22 +23,6 @@ function parseBody(body: unknown): ChatRequestBody | null {
   if (typeof value.message !== "string" || !value.message.trim()) return null;
   return {
     message: value.message.trim().slice(0, 800),
-    locationId: typeof value.locationId === "string" ? value.locationId : undefined,
-  };
-}
-
-function mockResponse(
-  message: string,
-  data: import("@/lib/data/weather/weatherTypes").WeatherDashboardData
-): ChatApiResponse {
-  const payload = getMockResponse(message, data);
-  return {
-    answer: payload.content,
-    shouldVisualize: !!payload.visualization,
-    visualization: payload.visualization,
-    insights: payload.insights,
-    canAddToDashboard: !!payload.visualization,
-    mode: "mock",
   };
 }
 
@@ -90,19 +64,6 @@ export async function POST(request: NextRequest): Promise<Response> {
     );
   }
 
-  const weatherResult = await getWeather({ locationId: parsed.locationId });
-  if (!weatherResult.success) {
-    return Response.json(
-      { error: "Unable to load weather data for this location.", category: "weather_data_error" },
-      { status: 502 }
-    );
-  }
-
-  const weatherData = weatherResult.data;
-  if (process.env.AI_PROVIDER === "mock") {
-    return Response.json(mockResponse(parsed.message, weatherData));
-  }
-
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) {
     const error = "GEMINI_API_KEY is missing from the server environment.";
@@ -113,24 +74,31 @@ export async function POST(request: NextRequest): Promise<Response> {
   const provider = new GeminiProvider(apiKey);
   try {
     const result = await provider.generate({
-      systemPrompt: buildSystemPrompt(weatherData),
+      systemPrompt: buildSystemPrompt(),
       userMessage: parsed.message,
-      tools: AI_TOOL_DEFINITIONS,
-      executeTool: (name, args) =>
-        executeTool(name as ToolName, args as ToolArgs, weatherData),
     });
 
     const response = validateLLMResponse(result.content);
+    let queryData: DataRecord[] = [];
+    if (response.sqlQuery) {
+      try {
+        queryData = executeSalesQuery(response.sqlQuery);
+      } catch (sqlErr) {
+        console.warn(`[/api/chat] SQL execution warning: ${(sqlErr as Error).message}`);
+      }
+    }
+
     let visualization: ChatApiResponse["visualization"];
-    if (response.shouldVisualize && response.visualization && result.toolResult) {
+    if (response.shouldVisualize && response.visualization && queryData.length > 0) {
       visualization = reconcileVisualization(
         response.visualization,
-        result.toolResult.chartData
+        queryData
       ) ?? undefined;
     }
 
     return Response.json({
-      answer: response.answer,
+      answer: response.answerSummary,
+      sqlQuery: response.sqlQuery,
       shouldVisualize: !!visualization,
       visualization,
       insights: response.insights,

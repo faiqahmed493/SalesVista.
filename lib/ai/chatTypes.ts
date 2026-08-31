@@ -65,12 +65,8 @@ export interface AIResponsePayload {
 // ─── Suggested starter questions ──────────────────────────────────────────────
 
 export const SUGGESTED_QUESTIONS: readonly string[] = [
-  "What will the temperature be tomorrow?",
-  "Show me the temperature trend for the next 24 hours.",
-  "Which day will have the highest temperature?",
-  "Show precipitation for the next 7 days.",
-  "Compare wind speed and wind gusts.",
-  "Which day has the highest chance of rain?",
-  "Summarize tomorrow's weather.",
-  "Show me the UV index for the next week.",
+  "Show total sales by category as a bar chart",
+  "Monthly profit trend over time",
+  "Top 5 most profitable products",
+  "Sales distribution by region as a pie chart",
 ] as const;

@@ -9,7 +9,7 @@ interface SuggestedQuestionsProps {
 
 /**
  * Shown in the empty chat state.
- * A welcome message + clickable question chips that seed the conversation.
+ * Welcome message + business query chips that seed the Text-to-SQL conversation.
  */
 export default function SuggestedQuestions({ onSelect }: SuggestedQuestionsProps) {
   return (
@@ -29,12 +29,13 @@ export default function SuggestedQuestions({ onSelect }: SuggestedQuestionsProps
             width: 44,
             height: 44,
             borderRadius: "50%",
-            background: "var(--muted)",
-            border: "1px solid var(--border)",
+            background: "rgba(59, 130, 246, 0.1)",
+            border: "1px solid rgba(59, 130, 246, 0.2)",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
             fontSize: 20,
+            color: "#3b82f6",
             margin: "0 auto 12px",
           }}
         >
@@ -48,10 +49,10 @@ export default function SuggestedQuestions({ onSelect }: SuggestedQuestionsProps
             marginBottom: 4,
           }}
         >
-          Ask your weather data
+          Ask Sales Intelligence AI
         </p>
         <p style={{ fontSize: 12, color: "var(--muted-foreground)", lineHeight: 1.5 }}>
-          Get instant insights, charts, and forecasts in plain language.
+          Ask natural-language questions to generate instant SQL queries and visual charts.
         </p>
       </div>
 
@@ -60,7 +61,7 @@ export default function SuggestedQuestions({ onSelect }: SuggestedQuestionsProps
         style={{
           display: "flex",
           flexDirection: "column",
-          gap: 7,
+          gap: 8,
           width: "100%",
         }}
       >
@@ -83,20 +84,21 @@ export default function SuggestedQuestions({ onSelect }: SuggestedQuestionsProps
             style={{
               width: "100%",
               textAlign: "left",
-              padding: "9px 13px",
+              padding: "10px 14px",
               background: "var(--muted)",
               border: "1px solid var(--border)",
               borderRadius: 10,
               fontSize: 12,
+              fontWeight: 500,
               color: "var(--foreground)",
               cursor: "pointer",
               lineHeight: 1.4,
-              transition: "all 0.14s",
+              transition: "all 0.14s ease",
             }}
             onMouseEnter={(e) => {
               const el = e.currentTarget as HTMLButtonElement;
-              el.style.borderColor = "var(--accent)";
-              el.style.color = "var(--accent)";
+              el.style.borderColor = "#3b82f6";
+              el.style.color = "#3b82f6";
             }}
             onMouseLeave={(e) => {
               const el = e.currentTarget as HTMLButtonElement;

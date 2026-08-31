@@ -394,38 +394,6 @@ function PieRenderer({ config, data, series, height }: RendererProps) {
 
   const totalValue = pieData.reduce((sum, d) => sum + d.value, 0);
 
-  const PieTooltip = ({
-    active,
-    payload,
-  }: {
-    active?: boolean;
-    payload?: { name: string; value: number; payload: { name: string; value: number } }[];
-  }) => {
-    if (!active || !payload?.length) return null;
-    const item = payload[0]!;
-    const pct = totalValue > 0 ? ((item.value / totalValue) * 100).toFixed(1) : "0";
-    return (
-      <div
-        style={{
-          background: CARD_BG,
-          border: `1px solid ${BORDER_COLOR}`,
-          borderRadius: 8,
-          padding: "10px 14px",
-          boxShadow: "0 4px 16px rgba(0,0,0,0.12)",
-          fontSize: 12,
-        }}
-      >
-        <p style={{ fontWeight: 600, color: FG_COLOR, marginBottom: 4 }}>
-          {item.name}
-        </p>
-        <p style={{ color: MUTED_COLOR }}>
-          {formatValue(item.value, tooltipDecimals, unit)}{" "}
-          <span style={{ color: FG_COLOR, fontWeight: 600 }}>({pct}%)</span>
-        </p>
-      </div>
-    );
-  };
-
   return (
     <ResponsiveContainer width="100%" height={height}>
       <PieChart>
@@ -450,7 +418,35 @@ function PieRenderer({ config, data, series, height }: RendererProps) {
             />
           ))}
         </Pie>
-        {(config.tooltip?.enabled ?? true) && <Tooltip content={<PieTooltip />} />}
+        {(config.tooltip?.enabled ?? true) && (
+          <Tooltip
+            content={(props) => {
+              if (!props.active || !props.payload?.length) return null;
+              const item = props.payload[0]!;
+              const pct = totalValue > 0 ? (((item.value as number) / totalValue) * 100).toFixed(1) : "0";
+              return (
+                <div
+                  style={{
+                    background: CARD_BG,
+                    border: `1px solid ${BORDER_COLOR}`,
+                    borderRadius: 8,
+                    padding: "10px 14px",
+                    boxShadow: "0 4px 16px rgba(0,0,0,0.12)",
+                    fontSize: 12,
+                  }}
+                >
+                  <p style={{ fontWeight: 600, color: FG_COLOR, marginBottom: 4 }}>
+                    {item.name}
+                  </p>
+                  <p style={{ color: MUTED_COLOR }}>
+                    {formatValue(item.value as number, tooltipDecimals, unit)}{" "}
+                    <span style={{ color: FG_COLOR, fontWeight: 600 }}>({pct}%)</span>
+                  </p>
+                </div>
+              );
+            }}
+          />
+        )}
         {shouldShowLegend(config) && (
           <Legend
             wrapperStyle={{ fontSize: 12, paddingTop: 8 }}

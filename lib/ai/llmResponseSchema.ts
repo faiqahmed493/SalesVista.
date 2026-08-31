@@ -1,68 +1,30 @@
-/**
- * LLM response schema and runtime validator.
- *
- * The AI must return JSON matching `LLMResponse`.
- * `validateLLMResponse()` is called before any data leaves the server.
- *
- * Security guarantees:
- *   - validateConfig() is called on visualization configs (blocks prototype pollution)
- *   - answer is stripped of any HTML/script tags
- *   - insights are string-checked and capped in length
- *   - visualization field names are validated by the existing SAFE_KEY_PATTERN
- *
- * The frontend receives `ChatApiResponse` — never the raw LLM output.
- */
-
 import { validateConfig } from "@/lib/visualization/validate";
 import type { VisualizationConfig, DataRecord } from "@/lib/visualization/types";
-
-// ─── LLM output schema ────────────────────────────────────────────────────────
-
-export type LLMToolUsed =
-  | "get_current_weather"
-  | "get_hourly_weather"
-  | "get_daily_weather"
-  | "none";
 
 export interface LLMVisualizationSeries {
   key: string;
   label: string;
-  unit?: string;
   color?: string;
-  dashed?: boolean;
-  fillOpacity?: number;
-  chartType?: string;
 }
 
 export interface LLMVisualization {
   type: string;
   title: string;
-  description?: string;
   xKey: string;
   series: LLMVisualizationSeries[];
-  unit?: string;
-  legend?: boolean;
-  stacked?: boolean;
-  height?: number;
 }
 
-/** The raw JSON the LLM must produce. */
 export interface LLMResponse {
-  answer: string;
+  answerSummary: string;
+  sqlQuery: string;
   shouldVisualize: boolean;
   visualization?: LLMVisualization;
   insights?: string[];
-  toolUsed?: LLMToolUsed;
 }
 
-// ─── What we return to the frontend ─────────────────────────────────────────
-
-/**
- * Validated response sent to the browser.
- * visualization is a paired (config + data) object ready for ChartRenderer.
- */
 export interface ChatApiResponse {
   answer: string;
+  sqlQuery?: string;
   shouldVisualize: boolean;
   visualization?: {
     config: VisualizationConfig;
@@ -70,37 +32,18 @@ export interface ChatApiResponse {
   };
   insights?: string[];
   canAddToDashboard: boolean;
-  /** "live" = real LLM, "mock" = fallback mock engine */
   mode: "live" | "mock";
 }
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-
-/** Strip potential HTML tags from AI text output */
 function sanitizeText(text: string): string {
   return text
-    .replace(/<[^>]*>/g, "") // remove tags
+    .replace(/<[^>]*>/g, "")
     .replace(/&lt;/g, "<")
     .replace(/&gt;/g, ">")
     .replace(/&amp;/g, "&")
-    .slice(0, 4000); // absolute cap
+    .slice(0, 4000);
 }
 
-const ALLOWED_TOOL_NAMES: LLMToolUsed[] = [
-  "get_current_weather",
-  "get_hourly_weather",
-  "get_daily_weather",
-  "none",
-];
-
-// ─── Validator ────────────────────────────────────────────────────────────────
-
-/**
- * Parse and validate a raw LLM JSON string.
- *
- * Returns a validated `LLMResponse` or throws with a descriptive error.
- * The caller should catch and return a safe fallback.
- */
 export function validateLLMResponse(rawContent: string): LLMResponse {
   let parsed: unknown;
   try {
@@ -115,25 +58,17 @@ export function validateLLMResponse(rawContent: string): LLMResponse {
 
   const obj = parsed as Record<string, unknown>;
 
-  // answer
-  if (typeof obj.answer !== "string" || !obj.answer.trim()) {
-    throw new Error("LLM response missing `answer` string");
-  }
+  const answerSummary =
+    typeof obj.answerSummary === "string" && obj.answerSummary.trim()
+      ? obj.answerSummary
+      : typeof obj.answer === "string" && obj.answer.trim()
+      ? obj.answer
+      : "No answer summary provided.";
 
-  // shouldVisualize
-  if (typeof obj.shouldVisualize !== "boolean") {
-    // coerce if possible
-    obj.shouldVisualize = Boolean(obj.shouldVisualize);
-  }
+  const sqlQuery = typeof obj.sqlQuery === "string" ? obj.sqlQuery.trim() : "";
 
-  // toolUsed (optional)
-  if (obj.toolUsed !== undefined) {
-    if (!ALLOWED_TOOL_NAMES.includes(obj.toolUsed as LLMToolUsed)) {
-      obj.toolUsed = "none";
-    }
-  }
+  const shouldVisualize = Boolean(obj.shouldVisualize);
 
-  // insights (optional)
   let insights: string[] | undefined;
   if (Array.isArray(obj.insights)) {
     insights = (obj.insights as unknown[])
@@ -143,92 +78,74 @@ export function validateLLMResponse(rawContent: string): LLMResponse {
       .slice(0, 8);
   }
 
-  // visualization (only if shouldVisualize)
   let visualization: LLMVisualization | undefined;
-  if (obj.shouldVisualize && obj.visualization) {
-    // Run through the existing security validator
-    const vizResult = validateConfig(obj.visualization);
-    if (!vizResult.valid) {
-      // Degrade gracefully — return text-only answer
-      obj.shouldVisualize = false;
-      console.warn(
-        "[AI] Visualization config rejected:",
-        vizResult.errors.join(", ")
-      );
+  if (shouldVisualize && obj.visualization && typeof obj.visualization === "object") {
+    const vizObj = obj.visualization as Record<string, unknown>;
+    const type = typeof vizObj.type === "string" ? vizObj.type : "bar";
+    const title = typeof vizObj.title === "string" ? vizObj.title : "Chart";
+    const xKey = typeof vizObj.xKey === "string" ? vizObj.xKey : "";
+    const seriesArr = Array.isArray(vizObj.series) ? vizObj.series : [];
+
+    const series: LLMVisualizationSeries[] = seriesArr.map((s: unknown) => {
+      const item = (s as Record<string, unknown>) || {};
+      return {
+        key: typeof item.key === "string" ? item.key : "",
+        label: typeof item.label === "string" ? item.label : "Metric",
+        color: typeof item.color === "string" ? item.color : undefined,
+      };
+    });
+
+    const vizCandidate = { type, title, xKey, series };
+    const vizResult = validateConfig(vizCandidate);
+    if (vizResult.valid) {
+      visualization = vizCandidate;
     } else {
-      visualization = obj.visualization as LLMVisualization;
+      console.warn("[AI] Visualization config invalid:", vizResult.errors.join(", "));
     }
   }
 
   return {
-    answer: sanitizeText(obj.answer as string),
-    shouldVisualize: Boolean(obj.shouldVisualize),
+    answerSummary: sanitizeText(answerSummary),
+    sqlQuery,
+    shouldVisualize: Boolean(visualization),
     visualization,
     insights,
-    toolUsed: (obj.toolUsed as LLMToolUsed) ?? "none",
   };
 }
 
-/**
- * Convert a validated LLMVisualization into a VisualizationConfig.
- * These types are compatible — this is mostly a cast with safe defaults.
- */
 export function toVisualizationConfig(
   viz: LLMVisualization
 ): VisualizationConfig {
   return {
     type: viz.type as VisualizationConfig["type"],
     title: viz.title,
-    description: viz.description,
     xKey: viz.xKey,
     series: viz.series.map((s) => ({
       key: s.key,
       label: s.label,
-      unit: s.unit,
       color: s.color,
-      dashed: s.dashed,
-      fillOpacity: s.fillOpacity,
-      chartType: s.chartType as VisualizationConfig["series"][0]["chartType"],
     })),
-    unit: viz.unit,
-    legend: viz.legend,
-    stacked: viz.stacked,
-    height: viz.height ?? 220,
-    tooltip: { enabled: true, decimals: 1 },
+    tooltip: { enabled: true, decimals: 2 },
+    height: 220,
   };
 }
 
-/**
- * Cross-check that every series key and xKey exist in the actual data.
- * If a key is missing, strip that series (don't crash the chart).
- *
- * Returns the pruned config and data, or null if nothing can be rendered.
- */
 export function reconcileVisualization(
   viz: LLMVisualization,
   chartData: DataRecord[]
 ): { config: VisualizationConfig; data: DataRecord[] } | null {
-  if (!chartData.length) return null;
+  if (!chartData || !chartData.length) return null;
 
   const sampleKeys = new Set(Object.keys(chartData[0]!));
 
-  // Check xKey exists
   if (!sampleKeys.has(viz.xKey)) {
-    console.warn(`[AI] xKey "${viz.xKey}" not found in data. Keys: ${[...sampleKeys].join(", ")}`);
+    console.warn(`[AI] xKey "${viz.xKey}" not found in chart data. Keys: ${[...sampleKeys].join(", ")}`);
     return null;
   }
 
-  // Filter out series with missing keys
-  const validSeries = viz.series.filter((s) => {
-    if (!sampleKeys.has(s.key)) {
-      console.warn(`[AI] series key "${s.key}" not found in data`);
-      return false;
-    }
-    return true;
-  });
-
+  const validSeries = viz.series.filter((s) => sampleKeys.has(s.key));
   if (!validSeries.length) {
-    console.warn("[AI] No valid series after reconciliation");
+    console.warn("[AI] No valid series keys found in chart data");
     return null;
   }
 

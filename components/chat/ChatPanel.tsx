@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useState, useCallback, useRef, useEffect } from "react";
-import type { WeatherDashboardData } from "@/lib/data/weather/weatherTypes";
 import type { ChatMessage, VisualizationPayload } from "@/lib/ai/chatTypes";
 import type { ChatApiResponse } from "@/lib/ai/llmResponseSchema";
 import ChatMessageItem from "@/components/chat/ChatMessage";
@@ -30,9 +29,7 @@ const TrashIcon = () => (
 interface ChatPanelProps {
   isOpen: boolean;
   onClose: () => void;
-  data: WeatherDashboardData | null;
-  locationId: string;
-  locationName: string;
+  locationName?: string;
   onAddToDashboard: (visualization: VisualizationPayload) => void;
 }
 
@@ -52,9 +49,7 @@ interface ChatPanelProps {
 export default function ChatPanel({
   isOpen,
   onClose,
-  data,
-  locationId,
-  locationName,
+  locationName = "Sales Intelligence",
   onAddToDashboard,
 }: ChatPanelProps) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -86,7 +81,7 @@ export default function ChatPanel({
         const res = await fetch("/api/chat", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ message: text.trim(), locationId }),
+          body: JSON.stringify({ message: text.trim() }),
         });
 
         const responseBody = (await res.json()) as
@@ -140,7 +135,7 @@ export default function ChatPanel({
         setIsThinking(false);
       }
     },
-    [isThinking, locationId]
+    [isThinking]
   );
 
   const handleClear = useCallback(() => {

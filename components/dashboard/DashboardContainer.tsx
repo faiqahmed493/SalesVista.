@@ -1,48 +1,53 @@
 "use client";
 
-import React, { useState, useCallback } from "react";
-import type { WeatherDashboardData } from "@/lib/data/weather/weatherTypes";
-import type { WeatherError } from "@/lib/data/weather/weatherTypes";
-import type { LocationConfig } from "@/lib/data/locations";
+import React, { useState, useCallback, useEffect } from "react";
+import type { SalesDashboardData } from "@/lib/data/sales/salesService";
+import type { VisualizationConfig } from "@/lib/visualization/types";
+import type { VisualizationPayload } from "@/lib/ai/chatTypes";
 
 import DashboardHeader from "@/components/dashboard/DashboardHeader";
 import KpiGrid from "@/components/dashboard/KpiGrid";
-import ForecastGrid from "@/components/dashboard/ForecastGrid";
-import SunriseSunsetCard from "@/components/dashboard/SunriseSunsetCard";
-import WeatherInsights from "@/components/dashboard/WeatherInsights";
-import TemperatureChart from "@/components/charts/TemperatureChart";
-import PrecipitationChart from "@/components/charts/PrecipitationChart";
-import WindChart from "@/components/charts/WindChart";
-import HumidityPressureChart from "@/components/charts/HumidityPressureChart";
-import {
-  KpiCardSkeleton,
-  ChartSkeleton,
-  ForecastCardSkeleton,
-  InsightSkeleton,
-} from "@/components/ui/Skeleton";
-import ChatPanel, { AskAiButton } from "@/components/chat/ChatPanel";
 import ChartRenderer from "@/components/visualization/ChartRenderer";
-import type { VisualizationPayload } from "@/lib/ai/chatTypes";
+import ChatPanel, { AskAiButton } from "@/components/chat/ChatPanel";
+import { KpiCardSkeleton, ChartSkeleton } from "@/components/ui/Skeleton";
 
 const CHAT_PANEL_WIDTH = 380;
 
+// Baseline Visualization Configurations
+const CATEGORY_CHART_CONFIG: VisualizationConfig = {
+  type: "bar",
+  title: "Sales & Profit by Product Category",
+  description: "Total revenue and net profit across Furniture, Office Supplies, and Technology",
+  xKey: "category",
+  series: [
+    { key: "sales", label: "Total Sales ($)", color: "#3b82f6" },
+    { key: "profit", label: "Total Profit ($)", color: "#10b981" },
+  ],
+  tooltip: { enabled: true, decimals: 2 },
+  height: 320,
+};
+
+const MONTHLY_TREND_CONFIG: VisualizationConfig = {
+  type: "area",
+  title: "Monthly Sales & Profit Trend",
+  description: "Revenue trajectory over time with profit volume overlay",
+  xKey: "month",
+  series: [
+    { key: "sales", label: "Sales ($)", color: "#3b82f6", fillOpacity: 0.25 },
+    { key: "profit", label: "Profit ($)", color: "#10b981", fillOpacity: 0.35 },
+  ],
+  tooltip: { enabled: true, decimals: 2 },
+  height: 320,
+};
+
 interface DashboardContainerProps {
-  initialData: WeatherDashboardData | null;
-  initialLocationId: string;
-  initialError: WeatherError | null;
-  locations: LocationConfig[];
+  initialData: SalesDashboardData | null;
 }
 
-export default function DashboardContainer({
-  initialData,
-  initialLocationId,
-  initialError,
-  locations,
-}: DashboardContainerProps) {
-  const [data, setData] = useState<WeatherDashboardData | null>(initialData);
-  const [locationId, setLocationId] = useState(initialLocationId);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<WeatherError | null>(initialError);
+export default function DashboardContainer({ initialData }: DashboardContainerProps) {
+  const [data, setData] = useState<SalesDashboardData | null>(initialData);
+  const [isLoading, setIsLoading] = useState(!initialData);
+  const [error, setError] = useState<string | null>(null);
   const [lastRefreshed, setLastRefreshed] = useState<Date | null>(
     initialData ? new Date() : null
   );
@@ -51,109 +56,98 @@ export default function DashboardContainer({
     VisualizationPayload[]
   >([]);
 
-  // console.log(data);
-
-  const fetchWeather = useCallback(
-    async (locId: string, forceRefresh = false) => {
-      setIsLoading(true);
-      setError(null);
-      try {
-        const url = `/api/weather?location=${locId}${forceRefresh ? "&refresh=true" : ""}`;
-        const res = await fetch(url);
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const result = await res.json();
-        if (result.success) {
-          setData(result.data);
-          setLastRefreshed(new Date());
-        } else {
-          setError(result.error);
-        }
-      } catch (err) {
-        setError({
-          kind: "network_failure",
-          message:
-            "Could not fetch weather data. Check your connection and try again.",
-          cause: err,
-        });
-      } finally {
-        setIsLoading(false);
+  const fetchSalesData = useCallback(async () => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/sales");
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const result = await res.json();
+      if (result.success) {
+        setData(result.data);
+        setLastRefreshed(new Date());
+      } else {
+        setError(result.error || "Failed to load sales dashboard data");
       }
-    },
-    []
-  );
+    } catch (err) {
+      console.error("[DashboardContainer] Error fetching sales data:", err);
+      setError("Could not load sales dashboard data. Check your connection.");
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
 
-  const handleLocationChange = useCallback(
-    (newLocationId: string) => {
-      setLocationId(newLocationId);
-      // Keep existing data visible while loading new location
-      fetchWeather(newLocationId);
-    },
-    [fetchWeather]
-  );
+  // Fetch on mount if no initial data provided
+  useEffect(() => {
+    let isMounted = true;
+    if (!initialData) {
+      fetch("/api/sales")
+        .then((res) => res.json())
+        .then((result) => {
+          if (isMounted) {
+            if (result.success) {
+              setData(result.data);
+              setLastRefreshed(new Date());
+            } else {
+              setError(result.error || "Failed to load sales dashboard data");
+            }
+            setIsLoading(false);
+          }
+        })
+        .catch(() => {
+          if (isMounted) {
+            setError("Could not load sales dashboard data. Check your connection.");
+            setIsLoading(false);
+          }
+        });
+    }
+    return () => {
+      isMounted = false;
+    };
+  }, [initialData]);
 
-  const handleRefresh = useCallback(() => {
-    fetchWeather(locationId, true);
-  }, [fetchWeather, locationId]);
+  const handleSimulateOrder = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const res = await fetch("/api/sales/generate", { method: "POST" });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const result = await res.json();
+      if (result.success && result.data) {
+        setData(result.data);
+        setLastRefreshed(new Date());
+      }
+    } catch (err) {
+      console.error("[DashboardContainer] Error simulating order:", err);
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
 
-  const handleAddToDashboard = useCallback(
-    (visualization: VisualizationPayload) => {
-      setDashboardVisualizations((current) =>
-        current.some(
-          (item) =>
-            item.config.title === visualization.config.title &&
-            item.config.type === visualization.config.type
-        )
-          ? current
-          : [...current, visualization]
-      );
-    },
-    []
-  );
+  const handleAddToDashboard = useCallback((visualization: VisualizationPayload) => {
+    setDashboardVisualizations((current) =>
+      current.some(
+        (item) =>
+          item.config.title === visualization.config.title &&
+          item.config.type === visualization.config.type
+      )
+        ? current
+        : [...current, visualization]
+    );
+  }, []);
 
-  const showFullSkeleton = isLoading && !data;
-  const selectedLocation = locations.find((l) => l.id === locationId);
+  const showSkeleton = isLoading && !data;
 
   return (
     <div style={{ minHeight: "100vh", background: "var(--background)" }}>
-      {/* ── Sticky Header ─────────────────────────────────────────────── */}
+      {/* Sticky Header */}
       <DashboardHeader
-        data={data}
-        locations={locations}
-        selectedLocationId={locationId}
         isLoading={isLoading}
         lastRefreshed={lastRefreshed}
-        onLocationChange={handleLocationChange}
-        onRefresh={handleRefresh}
+        onSimulateOrder={handleSimulateOrder}
+        onRefresh={fetchSalesData}
       />
 
-      {/* ── Loading overlay (for location changes with existing data) ── */}
-      {isLoading && data && (
-        <div
-          style={{
-            position: "fixed",
-            top: 72,
-            left: "50%",
-            transform: "translateX(-50%)",
-            background: "var(--card)",
-            border: "1px solid var(--border)",
-            borderRadius: 24,
-            padding: "8px 18px",
-            fontSize: 12,
-            fontWeight: 500,
-            color: "var(--muted-foreground)",
-            zIndex: 50,
-            display: "flex",
-            alignItems: "center",
-            gap: 8,
-            boxShadow: "0 4px 16px rgba(0,0,0,0.12)",
-          }}
-        >
-          <SpinnerDot />
-          Fetching fresh data…
-        </div>
-      )}
-
-      {/* ── Main content ───────────────────────────────────────────────── */}
+      {/* Main Content */}
       <main
         style={{
           maxWidth: chatOpen ? `calc(100% - ${CHAT_PANEL_WIDTH + 16}px)` : 1400,
@@ -161,160 +155,108 @@ export default function DashboardContainer({
           padding: "28px 24px 48px",
           display: "flex",
           flexDirection: "column",
-          gap: 20,
-          opacity: isLoading && data ? 0.55 : 1,
-          transition: "max-width 0.25s cubic-bezier(0.4,0,0.2,1), margin 0.25s, opacity 0.3s",
-          pointerEvents: isLoading ? "none" : "auto",
+          gap: 24,
+          opacity: isLoading && data ? 0.7 : 1,
+          transition: "max-width 0.25s ease, margin 0.25s ease, opacity 0.2s ease",
         }}
       >
-        {/* ── Error state (no data at all) ─────────────────────────── */}
+        {/* Error Notification */}
         {error && !data && (
-          <ErrorPanel
-            error={error}
-            onRetry={() => fetchWeather(locationId, true)}
-          />
+          <div
+            style={{
+              background: "var(--card)",
+              border: "1px solid var(--border)",
+              borderRadius: 12,
+              padding: "32px 24px",
+              textAlign: "center",
+            }}
+          >
+            <p style={{ color: "#ef4444", fontWeight: 600 }}>{error}</p>
+            <button
+              onClick={fetchSalesData}
+              style={{
+                marginTop: 12,
+                padding: "8px 16px",
+                background: "#3b82f6",
+                color: "#fff",
+                border: "none",
+                borderRadius: 8,
+                cursor: "pointer",
+              }}
+            >
+              Retry
+            </button>
+          </div>
         )}
 
-        {/* ── Section 1: KPI Cards ──────────────────────────────────── */}
-        <section aria-label="Key metrics">
-          {showFullSkeleton ? (
+        {/* Section 1: KPI Cards */}
+        <section aria-label="Sales KPI Metrics">
+          {showSkeleton ? (
             <div
               style={{
                 display: "grid",
-                gridTemplateColumns: "repeat(6, 1fr)",
+                gridTemplateColumns: "repeat(4, 1fr)",
                 gap: 16,
               }}
-              className="sm:grid-cols-3 lg:grid-cols-6"
             >
-              {Array.from({ length: 6 }).map((_, i) => (
+              {Array.from({ length: 4 }).map((_, i) => (
                 <KpiCardSkeleton key={i} />
               ))}
             </div>
-          ) : data ? (
-            <KpiGrid current={data.current} today={data.daily[0]} />
-          ) : null}
+          ) : (
+            <KpiGrid kpis={data?.kpis} />
+          )}
         </section>
 
-        {/* ── Section 2 + 7: Temperature Chart + Sunrise Sidebar ───── */}
-        {/* <section
-          style={{ display: "grid", gap: 20 }}
-          className="grid-cols-1 lg:grid-cols-3"
-          aria-label="Temperature and sun"
-        >
-          <div className="lg:col-span-2">
-            {showFullSkeleton ? (
-              <ChartSkeleton height={280} />
-            ) : data ? (
-              <TemperatureChart
-                hourly={data.hourly}
-                observedAt={data.current.observedAt}
-              />
-            ) : null}
-          </div>
-          <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-            {showFullSkeleton ? (
-              <>
-                <InsightSkeleton />
-              </>
-            ) : data ? (
-              <SunriseSunsetCard today={data.daily[0]!} />
-            ) : null}
-          </div>
-        </section> */}
-
-        {/* ── Sections 3 & 4: Precipitation + Wind ─────────────────── */}
+        {/* Section 2: Baseline Breakdown Visualizations */}
         <section
-          style={{ display: "grid", gap: 20 }}
-          className="grid-cols-1 md:grid-cols-2"
-          aria-label="Precipitation and wind"
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fit, minmax(480px, 1fr))",
+            gap: 20,
+          }}
+          aria-label="Sales breakdown charts"
         >
-          {showFullSkeleton ? (
+          {showSkeleton ? (
             <>
-              <ChartSkeleton height={240} />
-              <ChartSkeleton height={240} />
+              <ChartSkeleton height={320} />
+              <ChartSkeleton height={320} />
             </>
           ) : data ? (
             <>
-              <PrecipitationChart
-                hourly={data.hourly}
-                observedAt={data.current.observedAt}
+              <ChartRenderer
+                config={CATEGORY_CHART_CONFIG}
+                data={data.salesByCategory}
               />
-              <WindChart
-                hourly={data.hourly}
-                observedAt={data.current.observedAt}
+              <ChartRenderer
+                config={MONTHLY_TREND_CONFIG}
+                data={data.monthlySalesTrend}
               />
             </>
           ) : null}
         </section>
 
-        {/* ── Sections 5 & 8: Humidity/Pressure + Insights ─────────── */}
-        <section
-          style={{ display: "grid", gap: 20 }}
-          className="grid-cols-1 md:grid-cols-2"
-          aria-label="Humidity, pressure and insights"
-        >
-          {showFullSkeleton ? (
-            <>
-              <ChartSkeleton height={240} />
-              <InsightSkeleton />
-            </>
-          ) : data ? (
-            <>
-              <HumidityPressureChart
-                hourly={data.hourly}
-                observedAt={data.current.observedAt}
-              />
-              <WeatherInsights
-                hourly={data.hourly}
-                daily={data.daily}
-                observedAt={data.current.observedAt}
-              />
-            </>
-          ) : null}
-        </section>
-
-        {/* ── Section 6: 7-Day Forecast ─────────────────────────────── */}
-        <section aria-label="14-day forecast">
-          {showFullSkeleton ? (
-            <div
-              style={{
-                background: "var(--card)",
-                border: "1px solid var(--border)",
-                borderRadius: 12,
-                padding: 20,
-              }}
-            >
-              <div style={{ display: "flex", gap: 12, overflowX: "hidden" }}>
-                {Array.from({ length:7 }).map((_, i) => (
-                  <ForecastCardSkeleton key={i} />
-                ))}
-              </div>
-            </div>
-          ) : data ? (
-            <ForecastGrid daily={data.daily} />
-          ) : null}
-        </section>
-
+        {/* Section 3: AI Visualizations (Pinned from Chat) */}
         {dashboardVisualizations.length > 0 && (
-          <section aria-label="AI dashboard visualizations">
-            <div style={{ marginBottom: 12 }}>
+          <section aria-label="AI pinned visualizations">
+            <div style={{ marginBottom: 14 }}>
               <h2
                 style={{
-                  fontSize: 15,
-                  fontWeight: 600,
+                  fontSize: 16,
+                  fontWeight: 700,
                   color: "var(--foreground)",
                 }}
               >
                 AI Visualizations
               </h2>
-              <p style={{ fontSize: 11, color: "var(--muted-foreground)" }}>
-                Charts added from your AI conversations
+              <p style={{ fontSize: 12, color: "var(--muted-foreground)" }}>
+                Custom charts pinned directly from your Text-to-SQL AI conversations
               </p>
             </div>
             <div
               style={{
                 display: "grid",
-                gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))",
+                gridTemplateColumns: "repeat(auto-fit, minmax(440px, 1fr))",
                 gap: 20,
               }}
             >
@@ -329,118 +271,33 @@ export default function DashboardContainer({
           </section>
         )}
 
-        {/* ── Footer ────────────────────────────────────────────────── */}
-        {data && (
-          <footer
-            style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              flexWrap: "wrap",
-              gap: 8,
-              paddingTop: 8,
-              borderTop: "1px solid var(--border)",
-            }}
-          >
-            <p style={{ fontSize: 11, color: "var(--muted-foreground)" }}>
-              Data source:{" "}
-              <a
-                href="https://open-meteo.com"
-                target="_blank"
-                rel="noopener noreferrer"
-                style={{ color: "var(--accent)", textDecoration: "none" }}
-              >
-                Open-Meteo
-              </a>{" "}
-              · Free & open weather API · No API key required
-            </p>
-            <p style={{ fontSize: 11, color: "var(--muted-foreground)" }}>
-              {data.metadata.hourlyCount}h hourly · {data.metadata.dailyCount} days ·{" "}
-              Generated in {data.metadata.generationTimeMs.toFixed(0)}ms
-            </p>
-          </footer>
-        )}
+        {/* Footer */}
+        <footer
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            paddingTop: 16,
+            borderTop: "1px solid var(--border)",
+            fontSize: 11,
+            color: "var(--muted-foreground)",
+          }}
+        >
+          <p>Superstore Dataset · Internal Sales Business Intelligence Dashboard</p>
+          <p>Powered by SQLite WAL & Gemini 2.5 Text-to-SQL Pipeline</p>
+        </footer>
       </main>
 
-      {/* ── AI Chat Panel ──────────────────────────────────────────────── */}
+      {/* AI Chat Panel */}
       <ChatPanel
         isOpen={chatOpen}
         onClose={() => setChatOpen(false)}
-        data={data}
-        locationId={locationId}
-        locationName={selectedLocation?.name ?? ""}
+        locationName="Superstore Sales"
         onAddToDashboard={handleAddToDashboard}
       />
 
-      {/* ── Floating trigger (shown when panel is closed) ───────────────── */}
+      {/* Floating Trigger Button */}
       {!chatOpen && <AskAiButton onClick={() => setChatOpen(true)} />}
-    </div>
-  );
-}
-
-/* ── Internal sub-components ────────────────────────────────────────────── */
-
-function SpinnerDot() {
-  return (
-    <span
-      style={{
-        width: 8,
-        height: 8,
-        borderRadius: "50%",
-        background: "var(--accent)",
-        animation: "pulseDot 1s ease-in-out infinite",
-        display: "inline-block",
-      }}
-    >
-      <style>{`@keyframes pulseDot { 0%,100%{opacity:0.3;transform:scale(0.8)} 50%{opacity:1;transform:scale(1)} }`}</style>
-    </span>
-  );
-}
-
-function ErrorPanel({
-  error,
-  onRetry,
-}: {
-  error: WeatherError;
-  onRetry: () => void;
-}) {
-  return (
-    <div
-      style={{
-        background: "var(--card)",
-        border: "1px solid var(--border)",
-        borderRadius: 12,
-        padding: "32px 24px",
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-        gap: 12,
-        textAlign: "center",
-      }}
-    >
-      <span style={{ fontSize: 36 }}>⚠️</span>
-      <h2 style={{ fontSize: 16, fontWeight: 600, color: "var(--foreground)" }}>
-        Unable to load weather data
-      </h2>
-      <p style={{ fontSize: 13, color: "var(--muted-foreground)", maxWidth: 400 }}>
-        [{error.kind}] {error.message}
-      </p>
-      <button
-        onClick={onRetry}
-        style={{
-          marginTop: 8,
-          padding: "9px 20px",
-          background: "var(--accent)",
-          color: "var(--accent-foreground)",
-          border: "none",
-          borderRadius: 8,
-          fontSize: 13,
-          fontWeight: 600,
-          cursor: "pointer",
-        }}
-      >
-        Try again
-      </button>
     </div>
   );
 }
