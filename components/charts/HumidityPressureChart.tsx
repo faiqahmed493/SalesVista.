@@ -82,7 +82,7 @@ export default function HumidityPressureChart({
   return (
     <ChartCard title="Humidity & Pressure" subtitle="Next 24 hours · dual axis">
       <ResponsiveContainer width="100%" height={220}>
-        <ComposedChart data={data} margin={{ top: 4, right: 4, left: -16, bottom: 0 }}>
+        <ComposedChart data={data} margin={{ top: 4, right: 4, bottom: 0 }}>
           <CartesianGrid
             strokeDasharray="4 4"
             stroke="rgba(128,128,128,0.12)"
@@ -94,12 +94,13 @@ export default function HumidityPressureChart({
             tick={{ fill: "var(--muted-foreground)", fontSize: 11 }}
             axisLine={false}
             tickLine={false}
+            tickMargin={16}
           />
           {/* Left axis: Humidity 0-100% */}
           <YAxis
             yAxisId="humidity"
             domain={[0, 100]}
-            tick={{ fill: "#14b8a6", fontSize: 11 }}
+            tick={{ fill: "#14b8a6", fontSize: 11, textAnchor: "start", dx: -30 }}
             axisLine={false}
             tickLine={false}
             tickFormatter={(v) => `${v}%`}
@@ -118,7 +119,7 @@ export default function HumidityPressureChart({
           />
           <Tooltip content={<CustomTooltip />} />
           <Legend
-            wrapperStyle={{ fontSize: 12, paddingTop: 12 }}
+            wrapperStyle={{ fontSize: 12, paddingTop: 18 }}
             iconType="circle"
             iconSize={8}
           />

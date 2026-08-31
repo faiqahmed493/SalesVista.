@@ -91,7 +91,7 @@ function buildForecastUrl(location: LocationConfig): string {
     hourly: HOURLY_PARAMS,
     daily: DAILY_PARAMS,
     timezone: location.timezone,
-    forecast_days: "7",
+    forecast_days: "14",
   });
 
   return `${BASE_URL}/forecast?${params.toString()}`;

@@ -1,0 +1,76 @@
+/**
+ * Types for the AI chat system.
+ *
+ * The AI will eventually produce `AIResponse` objects as JSON.
+ * The chat UI renders them — it never executes AI-produced code.
+ */
+
+import type { VisualizationConfig } from "@/lib/visualization/types";
+import type { DataRecord } from "@/lib/visualization/types";
+
+// ─── Core message types ───────────────────────────────────────────────────────
+
+export type MessageRole = "user" | "assistant";
+
+/**
+ * A chart embedded inside an assistant message.
+ * Uses the generic ChartRenderer — the AI produces the config, not JSX.
+ */
+export interface VisualizationPayload {
+  config: VisualizationConfig;
+  data: DataRecord[];
+}
+
+/**
+ * A single message in the conversation.
+ *
+ * The assistant message can include:
+ *   - `content`         — natural language answer (required)
+ *   - `visualization`   — optional chart (config + data)
+ *   - `insights`        — optional bullet list of derived facts
+ *   - `canAddToDashboard` — whether to show the "Add to Dashboard" action
+ */
+export interface ChatMessage {
+  id: string;
+  role: MessageRole;
+  /** Main natural-language content of the message */
+  content: string;
+  /** Unix timestamp (Date.now()) */
+  timestamp: number;
+  /** Optional embedded chart */
+  visualization?: VisualizationPayload;
+  /** Optional bullet-point insights shown below the answer */
+  insights?: string[];
+  /** Show the "＋ Add to Dashboard" action button */
+  canAddToDashboard?: boolean;
+  /** True while the assistant is thinking (skeleton message) */
+  isLoading?: boolean;
+  /** True if the assistant encountered an error */
+  isError?: boolean;
+}
+
+// ─── Mock AI response payload ─────────────────────────────────────────────────
+
+/**
+ * What the mock (and later real) AI returns before being wrapped into ChatMessage.
+ * Omits `id`, `role`, `timestamp` which are added by the chat layer.
+ */
+export interface AIResponsePayload {
+  content: string;
+  visualization?: VisualizationPayload;
+  insights?: string[];
+  canAddToDashboard?: boolean;
+}
+
+// ─── Suggested starter questions ──────────────────────────────────────────────
+
+export const SUGGESTED_QUESTIONS: readonly string[] = [
+  "What will the temperature be tomorrow?",
+  "Show me the temperature trend for the next 24 hours.",
+  "Which day will have the highest temperature?",
+  "Show precipitation for the next 7 days.",
+  "Compare wind speed and wind gusts.",
+  "Which day has the highest chance of rain?",
+  "Summarize tomorrow's weather.",
+  "Show me the UV index for the next week.",
+] as const;

@@ -93,7 +93,7 @@ export default function PrecipitationChart({
         <ResponsiveContainer width="100%" height={220}>
           <BarChart
             data={data}
-            margin={{ top: 4, right: 4, left: -16, bottom: 0 }}
+            margin={{ top: 4, right: 4, left: 15, bottom: 0 }}
           >
             <CartesianGrid
               strokeDasharray="4 4"
@@ -108,7 +108,7 @@ export default function PrecipitationChart({
               tickLine={false}
             />
             <YAxis
-              tick={{ fill: "var(--muted-foreground)", fontSize: 11 }}
+              tick={{ fill: "var(--muted-foreground)", fontSize: 11, textAnchor: "start", dx: -48, }}
               axisLine={false}
               tickLine={false}
               tickFormatter={(v) => `${v}mm`}
