@@ -3,7 +3,7 @@
 import React, { useState, useCallback, useRef, useEffect } from "react";
 import type { WeatherDashboardData } from "@/lib/data/weather/weatherTypes";
 import type { ChatMessage, VisualizationPayload } from "@/lib/ai/chatTypes";
-import { getMockResponse } from "@/lib/ai/mockEngine";
+import type { ChatApiResponse } from "@/lib/ai/llmResponseSchema";
 import ChatMessageItem from "@/components/chat/ChatMessage";
 import TypingIndicator from "@/components/chat/TypingIndicator";
 import SuggestedQuestions from "@/components/chat/SuggestedQuestions";
@@ -31,6 +31,7 @@ interface ChatPanelProps {
   isOpen: boolean;
   onClose: () => void;
   data: WeatherDashboardData | null;
+  locationId: string;
   locationName: string;
   onAddToDashboard: (visualization: VisualizationPayload) => void;
 }
@@ -38,23 +39,27 @@ interface ChatPanelProps {
 /**
  * AI Chat side panel.
  *
- * Manages conversation state. On each send:
- *   1. Adds user message
- *   2. Shows typing indicator (simulated delay 0.8–2s)
- *   3. Runs getMockResponse(question, data) → adds assistant message
+ * Data flow:
+ *   User types message
+ *   → POST /api/chat { message, locationId }
+ *   → Server fetches weather + calls the selected AI provider
+ *   → Returns ChatApiResponse
+ *   → ChatPanel renders as ChatMessage with optional ChartRenderer
  *
- * The panel slides in from the right as a fixed sidebar.
- * Main content adjusts via paddingRight on the parent.
+ * The locationId is passed so the server-side route fetches the correct
+ * location's weather data for the AI context.
  */
 export default function ChatPanel({
   isOpen,
   onClose,
   data,
+  locationId,
   locationName,
   onAddToDashboard,
 }: ChatPanelProps) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isThinking, setIsThinking] = useState(false);
+  const [mode, setMode] = useState<"live" | "mock" | null>(null);
   const scrollAnchorRef = useRef<HTMLDivElement>(null);
 
   // Auto-scroll on new messages or typing indicator
@@ -66,7 +71,7 @@ export default function ChatPanel({
     async (text: string) => {
       if (!text.trim() || isThinking) return;
 
-      // Add user message
+      // Add user message immediately
       const userMsg: ChatMessage = {
         id: crypto.randomUUID(),
         role: "user",
@@ -76,42 +81,66 @@ export default function ChatPanel({
       setMessages((prev) => [...prev, userMsg]);
       setIsThinking(true);
 
-      // Simulate AI latency: 800ms–2000ms
-      await new Promise((res) =>
-        setTimeout(res, 800 + Math.random() * 1200)
-      );
+      try {
+        // Call server-side API route — API key never leaves the server
+        const res = await fetch("/api/chat", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ message: text.trim(), locationId }),
+        });
 
-      // Build response
-      let payload;
-      if (!data) {
-        payload = {
-          content:
-            "Weather data isn't loaded yet. Please wait for the dashboard to finish loading and try again.",
-          isError: false,
-        };
-      } else {
-        try {
-          payload = getMockResponse(text, data);
-        } catch {
-          payload = {
-            content:
-              "Something went wrong generating that response. Please try again.",
-            isError: true,
-          };
+        const responseBody = (await res.json()) as
+          | ChatApiResponse
+          | { error?: string; category?: string };
+        if (!res.ok) {
+          const category =
+            "category" in responseBody && responseBody.category
+              ? `[${responseBody.category}] `
+              : "";
+          throw new Error(
+            `${category}${"error" in responseBody && responseBody.error
+              ? responseBody.error
+              : `AI request failed (HTTP ${res.status})`}`
+          );
         }
+
+        const apiResponse = responseBody as ChatApiResponse;
+
+        // Track whether the response came from Gemini or explicit mock mode.
+        setMode(apiResponse.mode);
+
+        const assistantMsg: ChatMessage = {
+          id: crypto.randomUUID(),
+          role: "assistant",
+          content: apiResponse.answer,
+          timestamp: Date.now(),
+          visualization: apiResponse.visualization
+            ? {
+                config: apiResponse.visualization.config,
+                data: apiResponse.visualization.data,
+              }
+            : undefined,
+          insights: apiResponse.insights,
+          canAddToDashboard: apiResponse.canAddToDashboard,
+        };
+
+        setMessages((prev) => [...prev, assistantMsg]);
+      } catch (err) {
+        console.error("[ChatPanel] API error:", err);
+        const errMsg: ChatMessage = {
+          id: crypto.randomUUID(),
+          role: "assistant",
+          content:
+            "Unable to reach the AI service. Please check your connection and try again.",
+          timestamp: Date.now(),
+          isError: true,
+        };
+        setMessages((prev) => [...prev, errMsg]);
+      } finally {
+        setIsThinking(false);
       }
-
-      const assistantMsg: ChatMessage = {
-        id: crypto.randomUUID(),
-        role: "assistant",
-        timestamp: Date.now(),
-        ...payload,
-      };
-
-      setMessages((prev) => [...prev, assistantMsg]);
-      setIsThinking(false);
     },
-    [isThinking, data]
+    [isThinking, locationId]
   );
 
   const handleClear = useCallback(() => {
@@ -120,6 +149,7 @@ export default function ChatPanel({
   }, []);
 
   const messageCount = messages.length;
+  const modeLabel = mode === "live" ? "AI" : mode === "mock" ? "Mock mode" : "Connecting…";
 
   return (
     <div
@@ -170,14 +200,20 @@ export default function ChatPanel({
                 fontWeight: 700,
                 letterSpacing: "0.06em",
                 textTransform: "uppercase",
-                color: "var(--accent)",
-                background: `rgba(59,130,246,0.08)`,
-                border: "1px solid rgba(59,130,246,0.18)",
+                color: mode === "live" ? "var(--accent)" : "var(--muted-foreground)",
+                background:
+                  mode === "live"
+                    ? "rgba(59,130,246,0.08)"
+                    : "var(--muted)",
+                border:
+                  mode === "live"
+                    ? "1px solid rgba(59,130,246,0.18)"
+                    : "1px solid var(--border)",
                 borderRadius: 4,
                 padding: "1px 5px",
               }}
             >
-              AI
+              {mode === "live" ? "GPT" : "AI"}
             </span>
           </div>
           <p
@@ -187,7 +223,7 @@ export default function ChatPanel({
               marginTop: 1,
             }}
           >
-            {locationName ? `${locationName} · ` : ""}Mock mode
+            {locationName ? `${locationName} · ` : ""}{modeLabel}
           </p>
         </div>
 

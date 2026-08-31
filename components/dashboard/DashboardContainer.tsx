@@ -51,6 +51,8 @@ export default function DashboardContainer({
     VisualizationPayload[]
   >([]);
 
+  // console.log(data);
+
   const fetchWeather = useCallback(
     async (locId: string, forceRefresh = false) => {
       setIsLoading(true);
@@ -365,6 +367,7 @@ export default function DashboardContainer({
         isOpen={chatOpen}
         onClose={() => setChatOpen(false)}
         data={data}
+        locationId={locationId}
         locationName={selectedLocation?.name ?? ""}
         onAddToDashboard={handleAddToDashboard}
       />
