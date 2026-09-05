@@ -27,163 +27,160 @@ interface SuperstoreRow {
   Profit: string;
 }
 
-/**
- * Converts date strings from M/D/YYYY or MM/DD/YYYY to standard ISO YYYY-MM-DD.
- */
+const BATCH_SIZE = 500;
+
 function formatDate(dateStr: string): string {
-  if (!dateStr) return "";
   const parts = dateStr.trim().split("/");
-  if (parts.length === 3) {
-    const month = parts[0].padStart(2, "0");
-    const day = parts[1].padStart(2, "0");
-    const year = parts[2];
-    return `${year}-${month}-${day}`;
-  }
-  return dateStr;
+  return parts.length === 3
+    ? `${parts[2]}-${parts[0].padStart(2, "0")}-${parts[1].padStart(2, "0")}`
+    : dateStr;
 }
 
-export function seedSalesDatabase(): void {
-  console.log("Initializing database schema...");
-  initDatabase();
+function makeValues<T>(
+  rows: T[],
+  columns: number,
+  value: (row: T, column: number) => unknown
+): { text: string; values: unknown[] } {
+  const values: unknown[] = [];
+  const placeholders = rows.map((row) => {
+    const rowValues = Array.from({ length: columns }, (_, columnIndex) => {
+      values.push(value(row, columnIndex));
+      return `$${values.length}`;
+    });
+    return `(${rowValues.join(", ")})`;
+  });
+  return { text: placeholders.join(", "), values };
+}
 
-  const csvPath = path.join(process.cwd(), "data", "superstore.csv");
-  if (!fs.existsSync(csvPath)) {
-    throw new Error(`CSV file not found at path: ${csvPath}`);
+async function insertBatches<T>(
+  client: { query: (text: string, values?: unknown[]) => Promise<unknown> },
+  rows: T[],
+  columns: number,
+  statement: string,
+  value: (row: T, column: number) => unknown
+): Promise<void> {
+  for (let index = 0; index < rows.length; index += BATCH_SIZE) {
+    const batch = rows.slice(index, index + BATCH_SIZE);
+    const generated = makeValues(batch, columns, value);
+    await client.query(statement.replace("$VALUES", generated.text), generated.values);
   }
+}
 
-  console.log(`Reading dataset from ${csvPath}...`);
-  const fileContent = fs.readFileSync(csvPath, "utf-8");
-  const records: SuperstoreRow[] = parse(fileContent, {
+export async function seedSalesDatabase(): Promise<void> {
+  await initDatabase();
+  const csvPath = path.join(process.cwd(), "data", "superstore.csv");
+  if (!fs.existsSync(csvPath)) throw new Error(`CSV file not found at path: ${csvPath}`);
+
+  const records = parse(fs.readFileSync(csvPath, "utf-8"), {
     columns: true,
     skip_empty_lines: true,
     trim: true,
-  });
+  }) as SuperstoreRow[];
+  console.log(`Parsed ${records.length} records. Beginning batched database seeding...`);
 
-  console.log(`Parsed ${records.length} records. Beginning database seeding...`);
+  const categories = [...new Map(records.map((row) => [
+    `${row.Category}|||${row["Sub-Category"]}`,
+    [row.Category, row["Sub-Category"]] as const,
+  ])).values()];
+  const customers = [...new Map(records.map((row) => [
+    row["Customer ID"],
+    [row["Customer ID"], row["Customer Name"], row.Segment] as const,
+  ])).values()];
+  const locations = [...new Map(records.map((row) => {
+    const postalCode = row["Postal Code"] || "";
+    return [
+      `${row.Country}|||${row.City}|||${row.State}|||${postalCode}|||${row.Region}`,
+      [row.Country, row.City, row.State, postalCode, row.Region] as const,
+    ];
+  })).values()];
+  const products = [...new Map(records.map((row) => [
+    row["Product ID"],
+    [row["Product ID"], row["Product Name"], row.Category, row["Sub-Category"]] as const,
+  ])).values()];
 
-  // Prepared statements
-  const insertCategoryStmt = db.prepare(
-    "INSERT INTO categories (category_name, sub_category) VALUES (?, ?)"
-  );
-  const insertCustomerStmt = db.prepare(
-    "INSERT OR IGNORE INTO customers (customer_id, customer_name, segment) VALUES (?, ?, ?)"
-  );
-  const insertLocationStmt = db.prepare(
-    "INSERT INTO locations (country, city, state, postal_code, region) VALUES (?, ?, ?, ?, ?)"
-  );
-  const insertProductStmt = db.prepare(
-    "INSERT OR IGNORE INTO products (product_id, product_name, category_id) VALUES (?, ?, ?)"
-  );
-  const insertOrderStmt = db.prepare(
-    `INSERT OR REPLACE INTO orders (
-      row_id, order_id, order_date, ship_date, ship_mode, customer_id, location_id, product_id, sales, quantity, discount, profit
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
-  );
+  const client = await db.connect();
+  try {
+    await client.query("BEGIN");
+    await client.query("TRUNCATE orders, products, categories, customers, locations RESTART IDENTITY CASCADE");
 
-  const categoryMap = new Map<string, number>();
-  const locationMap = new Map<string, number>();
+    await insertBatches(client, categories, 2,
+      "INSERT INTO categories (category_name, sub_category) VALUES $VALUES",
+      (row, column) => row[column]);
+    await insertBatches(client, customers, 3,
+      "INSERT INTO customers (customer_id, customer_name, segment) VALUES $VALUES",
+      (row, column) => row[column]);
+    await insertBatches(client, locations, 5,
+      "INSERT INTO locations (country, city, state, postal_code, region) VALUES $VALUES",
+      (row, column) => row[column]);
 
-  const seedTransaction = db.transaction(() => {
-    // Clear existing data to allow fresh seed
-    db.prepare("DELETE FROM orders").run();
-    db.prepare("DELETE FROM products").run();
-    db.prepare("DELETE FROM categories").run();
-    db.prepare("DELETE FROM customers").run();
-    db.prepare("DELETE FROM locations").run();
+    const categoryResult = await client.query(
+      "SELECT category_id, category_name, sub_category FROM categories"
+    ) as { rows: { category_id: number; category_name: string; sub_category: string }[] };
+    const categoryIds = new Map(
+      categoryResult.rows.map((row) => [`${row.category_name}|||${row.sub_category}`, row.category_id])
+    );
 
-    for (const row of records) {
-      // 1. Category
-      const catKey = `${row.Category}|||${row["Sub-Category"]}`;
-      let categoryId = categoryMap.get(catKey);
-      if (!categoryId) {
-        const res = insertCategoryStmt.run(row.Category, row["Sub-Category"]);
-        categoryId = Number(res.lastInsertRowid);
-        categoryMap.set(catKey, categoryId);
-      }
+    await insertBatches(client, products, 3,
+      "INSERT INTO products (product_id, product_name, category_id) VALUES $VALUES",
+      (row, column) => column === 2
+        ? categoryIds.get(`${row[2]}|||${row[3]}`)
+        : row[column]);
 
-      // 2. Customer
-      insertCustomerStmt.run(
-        row["Customer ID"],
-        row["Customer Name"],
-        row.Segment
-      );
+    const locationResult = await client.query(
+      "SELECT location_id, country, city, state, postal_code, region FROM locations"
+    ) as { rows: { location_id: number; country: string; city: string; state: string; postal_code: string | null; region: string }[] };
+    const locationIds = new Map(
+      locationResult.rows.map((row) => [
+        `${row.country}|||${row.city}|||${row.state}|||${row.postal_code || ""}|||${row.region}`,
+        row.location_id,
+      ])
+    );
 
-      // 3. Location
-      const postalCode = row["Postal Code"] || "";
-      const locKey = `${row.Country}|||${row.City}|||${row.State}|||${postalCode}|||${row.Region}`;
-      let locationId = locationMap.get(locKey);
-      if (!locationId) {
-        const res = insertLocationStmt.run(
-          row.Country,
-          row.City,
-          row.State,
-          postalCode,
-          row.Region
-        );
-        locationId = Number(res.lastInsertRowid);
-        locationMap.set(locKey, locationId);
-      }
+    await insertBatches(client, records, 12,
+      `INSERT INTO orders (
+        row_id, order_id, order_date, ship_date, ship_mode, customer_id,
+        location_id, product_id, sales, quantity, discount, profit
+      ) VALUES $VALUES`,
+      (row, column) => {
+        const postalCode = row["Postal Code"] || "";
+        const locationKey = `${row.Country}|||${row.City}|||${row.State}|||${postalCode}|||${row.Region}`;
+        return [
+          Number(row["Row ID"]), row["Order ID"], formatDate(row["Order Date"]),
+          formatDate(row["Ship Date"]), row["Ship Mode"], row["Customer ID"],
+          locationIds.get(locationKey), row["Product ID"], Number(row.Sales),
+          Number(row.Quantity), Number(row.Discount), Number(row.Profit),
+        ][column];
+      });
 
-      // 4. Product
-      insertProductStmt.run(
-        row["Product ID"],
-        row["Product Name"],
-        categoryId
-      );
+    await client.query(`
+      SELECT setval(
+        pg_get_serial_sequence('orders', 'row_id'),
+        COALESCE((SELECT MAX(row_id) FROM orders), 0) + 1,
+        false
+      )
+    `);
+    await client.query("COMMIT");
+  } catch (error) {
+    await client.query("ROLLBACK");
+    throw error;
+  } finally {
+    client.release();
+  }
 
-      // 5. Order
-      insertOrderStmt.run(
-        parseInt(row["Row ID"], 10),
-        row["Order ID"],
-        formatDate(row["Order Date"]),
-        formatDate(row["Ship Date"]),
-        row["Ship Mode"],
-        row["Customer ID"],
-        locationId,
-        row["Product ID"],
-        parseFloat(row.Sales),
-        parseInt(row.Quantity, 10),
-        parseFloat(row.Discount),
-        parseFloat(row.Profit)
-      );
-    }
-  });
-
-  seedTransaction();
-
-  const categoryCount = (
-    db.prepare("SELECT COUNT(*) as count FROM categories").get() as {
-      count: number;
-    }
-  ).count;
-  const customerCount = (
-    db.prepare("SELECT COUNT(*) as count FROM customers").get() as {
-      count: number;
-    }
-  ).count;
-  const locationCount = (
-    db.prepare("SELECT COUNT(*) as count FROM locations").get() as {
-      count: number;
-    }
-  ).count;
-  const productCount = (
-    db.prepare("SELECT COUNT(*) as count FROM products").get() as {
-      count: number;
-    }
-  ).count;
-  const orderCount = (
-    db.prepare("SELECT COUNT(*) as count FROM orders").get() as {
-      count: number;
-    }
-  ).count;
-
+  const counts = await Promise.all(["categories", "customers", "locations", "products", "orders"]
+    .map(async (table) => [table, (await db.query<{ count: string }>(
+      `SELECT COUNT(*)::text AS count FROM ${table}`
+    )).rows[0].count] as const));
+  const countMap = new Map(counts);
   console.log("Seeding complete!");
-  console.log(`- Categories: ${categoryCount}`);
-  console.log(`- Customers:  ${customerCount}`);
-  console.log(`- Locations:  ${locationCount}`);
-  console.log(`- Products:   ${productCount}`);
-  console.log(`- Orders:     ${orderCount}`);
+  console.log(`- Categories: ${countMap.get("categories")}`);
+  console.log(`- Customers:  ${countMap.get("customers")}`);
+  console.log(`- Locations:  ${countMap.get("locations")}`);
+  console.log(`- Products:   ${countMap.get("products")}`);
+  console.log(`- Orders:     ${countMap.get("orders")}`);
 }
 
-// Run when executed directly
-seedSalesDatabase();
+seedSalesDatabase().catch((error) => {
+  console.error("Seeding failed:", error);
+  process.exitCode = 1;
+});

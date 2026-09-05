@@ -3,29 +3,17 @@ import type { DataRecord } from "@/lib/visualization/types";
 
 const FORBIDDEN_KEYWORDS_REGEX = /\b(DROP|DELETE|UPDATE|INSERT|ALTER|ATTACH|PRAGMA)\b/i;
 
-/**
- * Validates and executes a raw SQL query.
- * Enforces that the query starts with SELECT and contains no mutating SQL keywords.
- */
-export function executeSalesQuery(sql: string): DataRecord[] {
-  // Strip leading SQL comments (single-line -- or multi-line /* ... */) and whitespace
-  const sanitizedSql = sql
-    .replace(/--.*$/gm, "")
-    .replace(/\/\*[\s\S]*?\*\//g, "")
-    .trim();
-
+export async function executeSalesQuery(sql: string): Promise<DataRecord[]> {
+  const sanitizedSql = sql.replace(/--.*$/gm, "").replace(/\/\*[\s\S]*?\*\//g, "").trim();
   if (!/^SELECT\b/i.test(sanitizedSql)) {
     throw new Error("Invalid query: Query must start with SELECT.");
   }
-
   if (FORBIDDEN_KEYWORDS_REGEX.test(sanitizedSql)) {
-    throw new Error(
-      "Invalid query: Mutating operations (DROP, DELETE, UPDATE, INSERT, ALTER, ATTACH, PRAGMA) are strictly prohibited."
-    );
+    throw new Error("Invalid query: Mutating operations are strictly prohibited.");
   }
-
-  const stmt = db.prepare(sql);
-  return stmt.all() as DataRecord[];
+  console.log("🛡️ [GUARDRAIL CHECK]: Read-only SELECT validated. Running query...");
+  const result = await db.query(sanitizedSql);
+  return result.rows as DataRecord[];
 }
 
 export interface DashboardKPIs {
@@ -41,61 +29,38 @@ export interface SalesDashboardData {
   monthlySalesTrend: DataRecord[];
 }
 
-/**
- * Computes baseline KPIs and initial breakdown metrics for the Sales BI Dashboard.
- */
-export function getSalesDashboardData(): SalesDashboardData {
-  const kpiRow = db
-    .prepare(
-      `
+export async function getSalesDashboardData(): Promise<SalesDashboardData> {
+  const kpiResult = await db.query(`
     SELECT
-      COALESCE(ROUND(SUM(sales), 2), 0) as totalSales,
-      COALESCE(ROUND(SUM(profit), 2), 0) as totalProfit,
-      COALESCE(COUNT(DISTINCT order_id), 0) as totalOrders,
-      COALESCE(ROUND(AVG(discount), 4), 0) as averageDiscount
+      COALESCE(ROUND(SUM(sales), 2), 0) AS "totalSales",
+      COALESCE(ROUND(SUM(profit), 2), 0) AS "totalProfit",
+      COALESCE(COUNT(DISTINCT order_id), 0) AS "totalOrders",
+      COALESCE(ROUND(AVG(discount), 4), 0) AS "averageDiscount"
     FROM orders
-  `
-    )
-    .get() as DashboardKPIs;
-
-  const salesByCategory = db
-    .prepare(
-      `
-    SELECT
-      c.category_name as category,
-      ROUND(SUM(o.sales), 2) as sales,
-      ROUND(SUM(o.profit), 2) as profit
+  `);
+  const salesByCategoryResult = await db.query(`
+    SELECT c.category_name AS category,
+      ROUND(SUM(o.sales), 2) AS sales, ROUND(SUM(o.profit), 2) AS profit
     FROM orders o
     JOIN products p ON o.product_id = p.product_id
     JOIN categories c ON p.category_id = c.category_id
-    GROUP BY c.category_name
-    ORDER BY sales DESC
-  `
-    )
-    .all() as DataRecord[];
-
-  const monthlySalesTrend = db
-    .prepare(
-      `
-    SELECT
-      strftime('%Y-%m', order_date) as month,
-      ROUND(SUM(sales), 2) as sales,
-      ROUND(SUM(profit), 2) as profit
+    GROUP BY c.category_name ORDER BY sales DESC
+  `);
+  const monthlySalesTrendResult = await db.query(`
+    SELECT TO_CHAR(order_date, 'YYYY-MM') AS month,
+      ROUND(SUM(sales), 2) AS sales, ROUND(SUM(profit), 2) AS profit
     FROM orders
-    GROUP BY month
-    ORDER BY month ASC
-  `
-    )
-    .all() as DataRecord[];
-
+    GROUP BY month ORDER BY month ASC
+  `);
+  const kpiRow = kpiResult.rows[0] as Partial<DashboardKPIs> | undefined;
   return {
     kpis: {
-      totalSales: kpiRow?.totalSales ?? 0,
-      totalProfit: kpiRow?.totalProfit ?? 0,
-      totalOrders: kpiRow?.totalOrders ?? 0,
-      averageDiscount: kpiRow?.averageDiscount ?? 0,
+      totalSales: Number(kpiRow?.totalSales ?? 0),
+      totalProfit: Number(kpiRow?.totalProfit ?? 0),
+      totalOrders: Number(kpiRow?.totalOrders ?? 0),
+      averageDiscount: Number(kpiRow?.averageDiscount ?? 0),
     },
-    salesByCategory,
-    monthlySalesTrend,
+    salesByCategory: salesByCategoryResult.rows as DataRecord[],
+    monthlySalesTrend: monthlySalesTrendResult.rows as DataRecord[],
   };
 }

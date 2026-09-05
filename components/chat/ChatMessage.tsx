@@ -208,6 +208,88 @@ function AssistantCard({
               </ul>
             )}
 
+            {/* Query data table */}
+            {message.queryData && message.queryData.length > 0 && (() => {
+              const columns = Array.from(
+                new Set(message.queryData.flatMap((row) => Object.keys(row)))
+              );
+              const rows = message.queryData.slice(0, 5);
+
+              return (
+                <div
+                  style={{
+                    background: "rgba(15,23,42,0.02)",
+                    border: "1px solid var(--border)",
+                    borderRadius: 12,
+                    overflow: "hidden",
+                  }}
+                >
+                  <div
+                    style={{
+                      padding: "10px 12px",
+                      fontSize: 11,
+                      fontWeight: 700,
+                      color: "var(--muted-foreground)",
+                      letterSpacing: "0.04em",
+                      textTransform: "uppercase",
+                      borderBottom: "1px solid var(--border)",
+                      background: "rgba(148,163,184,0.05)",
+                    }}
+                  >
+                    Query data
+                  </div>
+                  <div style={{ overflowX: "auto" }}>
+                    <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
+                      <thead>
+                        <tr>
+                          {columns.map((column) => (
+                            <th
+                              key={column}
+                              style={{
+                                textAlign: "left",
+                                padding: "8px 10px",
+                                borderBottom: "1px solid var(--border)",
+                                color: "var(--muted-foreground)",
+                                background: "rgba(148,163,184,0.04)",
+                                fontWeight: 600,
+                                whiteSpace: "nowrap",
+                              }}
+                            >
+                              {column}
+                            </th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {rows.map((row, rowIndex) => (
+                          <tr key={rowIndex}>
+                            {columns.map((column) => {
+                              const value = row[column];
+                              const displayValue = value === null || value === undefined ? "—" : String(value);
+                              return (
+                                <td
+                                  key={`${rowIndex}-${column}`}
+                                  style={{
+                                    padding: "8px 10px",
+                                    borderBottom: rowIndex === rows.length - 1 ? "none" : "1px solid var(--border)",
+                                    color: "var(--foreground)",
+                                    verticalAlign: "top",
+                                    whiteSpace: "nowrap",
+                                  }}
+                                >
+                                  {displayValue}
+                                </td>
+                              );
+                            })}
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              );
+            })()}
+
             {/* Embedded chart */}
             {message.visualization && (
               <ChartRenderer

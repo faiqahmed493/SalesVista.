@@ -2,6 +2,9 @@
 
 import React, { useState } from "react";
 import RefreshButton from "@/components/dashboard/RefreshButton";
+import { useRouter } from "next/navigation";
+
+
 
 interface DashboardHeaderProps {
   isLoading: boolean;
@@ -26,6 +29,14 @@ export default function DashboardHeader({
       setIsSimulating(false);
     }
   };
+
+   const router = useRouter();
+
+  async function logout() {
+    await fetch("/api/auth/logout", { method: "POST" });
+    router.push("/login");
+    router.refresh();
+  }
 
   return (
     <header
@@ -117,6 +128,7 @@ export default function DashboardHeader({
             isLoading={isLoading}
             lastRefreshed={lastRefreshed}
           />
+          <button onClick={logout}>Sign out</button>
         </div>
       </div>
     </header>

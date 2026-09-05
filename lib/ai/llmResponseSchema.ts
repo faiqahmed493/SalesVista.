@@ -25,6 +25,7 @@ export interface LLMResponse {
 export interface ChatApiResponse {
   answer: string;
   sqlQuery?: string;
+  queryData?: DataRecord[];
   shouldVisualize: boolean;
   visualization?: {
     config: VisualizationConfig;

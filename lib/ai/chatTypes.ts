@@ -37,6 +37,8 @@ export interface ChatMessage {
   content: string;
   /** Unix timestamp (Date.now()) */
   timestamp: number;
+  /** Raw row data returned by the executed SQL query */
+  queryData?: DataRecord[];
   /** Optional embedded chart */
   visualization?: VisualizationPayload;
   /** Optional bullet-point insights shown below the answer */

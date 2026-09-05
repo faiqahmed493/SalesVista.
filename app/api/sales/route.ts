@@ -5,10 +5,17 @@
 
 import { NextResponse } from "next/server";
 import { getSalesDashboardData } from "@/lib/data/sales/salesService";
+import { getSession } from "@/lib/auth/session";
 
 export async function GET(): Promise<Response> {
+
+  const session = await getSession();
+
+  if (!session) {
+    return Response.json({ error: "Unauthorized" }, { status: 401 });
+  }
   try {
-    const data = getSalesDashboardData();
+    const data = await getSalesDashboardData();
     return NextResponse.json({ success: true, data }, {
       headers: {
         "Cache-Control": "no-store, max-age=0",

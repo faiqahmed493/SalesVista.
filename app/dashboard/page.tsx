@@ -11,7 +11,7 @@ export const metadata: Metadata = {
 export default async function DashboardPage() {
   let initialData = null;
   try {
-    initialData = getSalesDashboardData();
+    initialData = await getSalesDashboardData();
   } catch (err) {
     console.error("Error loading initial sales dashboard data:", err);
   }

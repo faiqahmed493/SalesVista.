@@ -78,6 +78,7 @@ export default function ChatPanel({
 
       try {
         // Call server-side API route — API key never leaves the server
+        console.log('📤 [FRONTEND]: Sending prompt to /api/chat:', text);
         const res = await fetch("/api/chat", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -87,6 +88,7 @@ export default function ChatPanel({
         const responseBody = (await res.json()) as
           | ChatApiResponse
           | { error?: string; category?: string };
+        console.log('📥 [FRONTEND]: Received AI payload + chart data:', responseBody);
         if (!res.ok) {
           const category =
             "category" in responseBody && responseBody.category
@@ -109,6 +111,7 @@ export default function ChatPanel({
           role: "assistant",
           content: apiResponse.answer,
           timestamp: Date.now(),
+          queryData: apiResponse.queryData,
           visualization: apiResponse.visualization
             ? {
                 config: apiResponse.visualization.config,
