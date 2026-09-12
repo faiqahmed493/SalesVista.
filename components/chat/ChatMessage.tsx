@@ -93,15 +93,16 @@ function UserBubble({ message }: { message: ChatMessage }) {
     >
       <div
         style={{
-          background: "#111827",
+          background: "linear-gradient(135deg, #F97316 0%, #EA580C 100%)",
           color: "#FFFFFF",
+          fontWeight: 500,
           borderRadius: "20px 20px 4px 20px",
           padding: "12px 18px",
           maxWidth: "80%",
           fontSize: 14,
           lineHeight: 1.6,
           wordBreak: "break-word",
-          boxShadow: "0 4px 14px rgba(0, 0, 0, 0.08)",
+          boxShadow: "0 4px 16px rgba(249, 115, 22, 0.28)",
         }}
       >
         {message.content}

@@ -21,16 +21,17 @@ export default function TypingIndicator() {
       {/* AI avatar dot */}
       <div
         style={{
-          width: 26,
-          height: 26,
+          width: 32,
+          height: 32,
           borderRadius: "50%",
-          background: "var(--muted)",
-          border: "1px solid var(--border)",
+          background: "linear-gradient(135deg, #F97316 0%, #EA580C 100%)",
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          fontSize: 13,
+          fontSize: 14,
+          color: "#FFFFFF",
           flexShrink: 0,
+          boxShadow: "0 2px 8px rgba(249, 115, 22, 0.25)",
         }}
       >
         ✦
@@ -39,23 +40,24 @@ export default function TypingIndicator() {
       {/* Bubble with bouncing dots */}
       <div
         style={{
-          background: "var(--muted)",
-          border: "1px solid var(--border)",
+          background: "#FFFFFF",
+          border: "1px solid #E2E8F0",
           borderRadius: "16px 16px 16px 4px",
-          padding: "10px 16px",
+          padding: "12px 18px",
           display: "flex",
           alignItems: "center",
-          gap: 5,
+          gap: 6,
+          boxShadow: "0 4px 14px rgba(0, 0, 0, 0.05)",
         }}
       >
         {[0, 1, 2].map((i) => (
           <div
             key={i}
             style={{
-              width: 6,
-              height: 6,
+              width: 7,
+              height: 7,
               borderRadius: "50%",
-              background: "var(--muted-foreground)",
+              background: "#F97316",
               animation: `typingBounce 1.2s ease-in-out ${i * 0.18}s infinite`,
             }}
           />

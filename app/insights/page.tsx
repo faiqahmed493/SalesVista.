@@ -2,11 +2,12 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { useSavedInsights } from '@/lib/context/SavedInsightsContext';
+import { useSavedInsights, deduplicateVisualizations } from '@/lib/context/SavedInsightsContext';
 import ChartRenderer from '@/components/visualization/ChartRenderer';
 
 export default function InsightsPage() {
   const { savedVisualizations, removeVisualization } = useSavedInsights();
+  const uniqueVisualizations = deduplicateVisualizations(savedVisualizations);
 
   return (
     <div style={{ padding: '24px 28px 48px', maxWidth: 1400, margin: '0 auto' }}>
@@ -20,7 +21,7 @@ export default function InsightsPage() {
             Visual widgets pinned directly from your AI Analytics Assistant queries.
           </p>
         </div>
-        {savedVisualizations.length > 0 && (
+        {uniqueVisualizations.length > 0 && (
           <Link
             href="/chat"
             style={{
@@ -43,7 +44,7 @@ export default function InsightsPage() {
       </div>
 
       {/* Empty State */}
-      {savedVisualizations.length === 0 ? (
+      {uniqueVisualizations.length === 0 ? (
         <div
           style={{
             backgroundColor: '#FFFFFF',
@@ -112,9 +113,9 @@ export default function InsightsPage() {
             gap: 20,
           }}
         >
-          {savedVisualizations.map((item, index) => (
+          {uniqueVisualizations.map((item, index) => (
             <ChartRenderer
-              key={`${item.config.title}-${index}`}
+              key={`${item.config.type}-${item.config.title.trim().toLowerCase()}-${index}`}
               config={item.config}
               data={item.data}
               onRemove={() => removeVisualization(item.config.title, item.config.type)}

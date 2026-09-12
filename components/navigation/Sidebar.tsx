@@ -1,14 +1,30 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-
 import { SalesVistaLogo } from '@/components/common/BrandLogo';
 
 export default function Sidebar() {
   const pathname = usePathname();
   const router = useRouter();
+  const [user, setUser] = useState<{ name: string; email?: string } | null>(null);
+
+  useEffect(() => {
+    let isMounted = true;
+    fetch('/api/auth/me')
+      .then((res) => res.json())
+      .then((data) => {
+        if (isMounted && data.success && data.user) {
+          setUser(data.user);
+        }
+      })
+      .catch((err) => console.error('Failed to fetch current user:', err));
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   const handleLogout = async () => {
     try {
@@ -18,6 +34,15 @@ export default function Sidebar() {
     }
     router.push('/login');
     router.refresh();
+  };
+
+  const getInitials = (name?: string) => {
+    if (!name) return 'U';
+    const parts = name.trim().split(/\s+/);
+    if (parts.length >= 2) {
+      return `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase();
+    }
+    return name.slice(0, 2).toUpperCase();
   };
 
   const navItems = [
@@ -56,6 +81,9 @@ export default function Sidebar() {
       ),
     },
   ];
+
+  const displayName = user?.name || 'Loading...';
+  const displayInitials = user?.name ? getInitials(user.name) : '..';
 
   return (
     <aside
@@ -115,7 +143,6 @@ export default function Sidebar() {
         })}
       </nav>
 
-
       {/* User Profile / Logout at Bottom */}
       <div
         style={{
@@ -126,7 +153,7 @@ export default function Sidebar() {
           justifyContent: 'space-between',
         }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
           <div
             style={{
               width: 36,
@@ -140,13 +167,25 @@ export default function Sidebar() {
               fontSize: 13,
               fontWeight: 700,
               color: '#F97316',
+              flexShrink: 0,
             }}
           >
-            TW
+            {displayInitials}
           </div>
-          <div>
-            <div style={{ fontSize: 13, fontWeight: 600, color: '#111827', lineHeight: 1.2 }}>
-              Teja Williams
+          <div style={{ minWidth: 0, overflow: 'hidden' }}>
+            <div
+              style={{
+                fontSize: 13,
+                fontWeight: 600,
+                color: '#111827',
+                lineHeight: 1.2,
+                whiteSpace: 'nowrap',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+              }}
+              title={displayName}
+            >
+              {displayName}
             </div>
             <div style={{ fontSize: 11, color: '#9CA3AF', marginTop: 2 }}>
               Sales Manager
@@ -167,6 +206,7 @@ export default function Sidebar() {
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
+            flexShrink: 0,
             transition: 'color 0.15s ease, background 0.15s ease',
           }}
           onMouseEnter={(e) => {

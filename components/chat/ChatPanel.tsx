@@ -8,6 +8,8 @@ import TypingIndicator from "@/components/chat/TypingIndicator";
 import SuggestedQuestions from "@/components/chat/SuggestedQuestions";
 import ChatInput from "@/components/chat/ChatInput";
 
+import { usePersistedChat } from "@/lib/hooks/usePersistedChat";
+
 const PANEL_WIDTH = 380;
 
 // ─── Icons ────────────────────────────────────────────────────────────────────
@@ -52,7 +54,7 @@ export default function ChatPanel({
   locationName = "Sales Intelligence",
   onAddToDashboard,
 }: ChatPanelProps) {
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const { messages, setMessages, clearMessages } = usePersistedChat('main');
   const [isThinking, setIsThinking] = useState(false);
   const [mode, setMode] = useState<"live" | "mock" | null>(null);
   const scrollAnchorRef = useRef<HTMLDivElement>(null);
@@ -142,9 +144,9 @@ export default function ChatPanel({
   );
 
   const handleClear = useCallback(() => {
-    setMessages([]);
+    clearMessages();
     setIsThinking(false);
-  }, []);
+  }, [clearMessages]);
 
   const messageCount = messages.length;
   const modeLabel = mode === "live" ? "AI" : mode === "mock" ? "Mock mode" : "Connecting…";

@@ -4,6 +4,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import type { ChatMessage } from '@/lib/ai/chatTypes';
 import ChatMessageItem from '@/components/chat/ChatMessage';
 import TypingIndicator from '@/components/chat/TypingIndicator';
+import { usePersistedChat } from '@/lib/hooks/usePersistedChat';
 
 const SUGGESTED_QUESTIONS = [
   'What are the top 5 profit generating sub-categories?',
@@ -13,7 +14,7 @@ const SUGGESTED_QUESTIONS = [
 ];
 
 export default function ChatPage() {
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const { messages, setMessages, clearMessages, isHydrated, todayDate } = usePersistedChat('main');
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -106,7 +107,7 @@ export default function ChatPage() {
             textAlign: 'center',
           }}
         >
-          <div
+          {/* <div
             style={{
               width: 54,
               height: 54,
@@ -118,11 +119,11 @@ export default function ChatPage() {
               color: '#FFFFFF',
               fontSize: 24,
               marginBottom: 16,
-              boxShadow: '0 8px 24px rgba(249, 115, 22, 0.25)',
+              // boxShadow: '0 8px 24px rgba(249, 115, 22, 0.25)',
             }}
           >
             ✦
-          </div>
+          </div> */}
           <h1 style={{ fontSize: 22, fontWeight: 800, color: '#111827', margin: '0 0 8px', letterSpacing: '-0.02em' }}>
             AI Analytics Assistant
           </h1>
@@ -176,6 +177,65 @@ export default function ChatPage() {
         </div>
       )}
 
+      {/* Messages Header & Clear Bar */}
+      {messages.length > 0 && (
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            marginBottom: 20,
+            padding: '10px 16px',
+            backgroundColor: '#F9FAFB',
+            border: '1px solid #F3F4F6',
+            borderRadius: 12,
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <span style={{ fontSize: 13, fontWeight: 600, color: '#374151' }}>
+              Today's Conversation ({todayDate})
+            </span>
+            <span
+              style={{
+                fontSize: 11,
+                fontWeight: 500,
+                color: '#6B7280',
+                backgroundColor: '#E5E7EB',
+                padding: '2px 8px',
+                borderRadius: 10,
+              }}
+            >
+              Persisted for 1 day • Resets tomorrow
+            </span>
+          </div>
+          <button
+            onClick={clearMessages}
+            style={{
+              background: 'none',
+              border: '1px solid #E5E7EB',
+              borderRadius: 8,
+              padding: '4px 10px',
+              fontSize: 12,
+              fontWeight: 500,
+              color: '#EF4444',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 4,
+              transition: 'all 0.15s ease',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = '#FEE2E2';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = 'transparent';
+            }}
+          >
+            🗑️ Clear Chat
+          </button>
+        </div>
+      )}
+
       {/* Messages Stream */}
       <div style={{ flex: 1 }}>
         {messages.map((msg) => (
@@ -209,7 +269,7 @@ export default function ChatPage() {
           style={{
             backgroundColor: '#FFFFFF',
             border: '1px solid #E5E7EB',
-            borderRadius: 24,
+            borderRadius: 14,
             padding: '10px 14px 10px 20px',
             boxShadow: '0 12px 36px -4px rgba(0, 0, 0, 0.08), 0 4px 12px rgba(0, 0, 0, 0.03)',
             display: 'flex',
