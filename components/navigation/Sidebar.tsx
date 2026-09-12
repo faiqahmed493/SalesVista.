@@ -109,7 +109,7 @@ export default function Sidebar() {
           alignItems: 'center',
         }}
       >
-        <SalesVistaLogo fontSize={20} />
+        <SalesVistaLogo fontSize={24} />
       </div>
 
       {/* Primary Navigation Links */}
