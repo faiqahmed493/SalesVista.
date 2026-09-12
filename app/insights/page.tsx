@@ -1,0 +1,127 @@
+'use client';
+
+import React from 'react';
+import Link from 'next/link';
+import { useSavedInsights } from '@/lib/context/SavedInsightsContext';
+import ChartRenderer from '@/components/visualization/ChartRenderer';
+
+export default function InsightsPage() {
+  const { savedVisualizations, removeVisualization } = useSavedInsights();
+
+  return (
+    <div style={{ padding: '24px 28px 48px', maxWidth: 1400, margin: '0 auto' }}>
+      {/* Page Description Header */}
+      <div style={{ marginBottom: 24, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div>
+          <h1 style={{ fontSize: 22, fontWeight: 800, color: '#111827', margin: 0, letterSpacing: '-0.02em' }}>
+            Custom Insights Canvas
+          </h1>
+          <p style={{ fontSize: 13, color: '#6B7280', margin: '4px 0 0' }}>
+            Visual widgets pinned directly from your AI Analytics Assistant queries.
+          </p>
+        </div>
+        {savedVisualizations.length > 0 && (
+          <Link
+            href="/chat"
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 6,
+              fontSize: 13,
+              fontWeight: 600,
+              color: '#F97316',
+              backgroundColor: '#FFF7ED',
+              border: '1px solid #FFEDD5',
+              borderRadius: 12,
+              padding: '8px 16px',
+              textDecoration: 'none',
+            }}
+          >
+            <span>＋ Pin More Charts</span>
+          </Link>
+        )}
+      </div>
+
+      {/* Empty State */}
+      {savedVisualizations.length === 0 ? (
+        <div
+          style={{
+            backgroundColor: '#FFFFFF',
+            border: '1px solid #F1F3F5',
+            borderRadius: 20,
+            padding: '64px 24px',
+            textAlign: 'center',
+            boxShadow: '0 4px 20px -2px rgba(0, 0, 0, 0.04)',
+            maxWidth: 580,
+            margin: '60px auto 0',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+          }}
+        >
+          <div
+            style={{
+              width: 60,
+              height: 60,
+              borderRadius: '50%',
+              backgroundColor: '#FFF7ED',
+              border: '1px solid #FFEDD5',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: 26,
+              color: '#F97316',
+              marginBottom: 18,
+            }}
+          >
+            📊
+          </div>
+          <h2 style={{ fontSize: 18, fontWeight: 700, color: '#111827', margin: '0 0 8px' }}>
+            No custom visuals pinned yet
+          </h2>
+          <p style={{ fontSize: 13, color: '#6B7280', margin: '0 0 24px', lineHeight: 1.6, maxWidth: 420 }}>
+            Generate custom data visualizations in the AI Analytics Assistant and click &quot;Save to Insights&quot; to pin them here.
+          </p>
+          <Link
+            href="/chat"
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 8,
+              fontSize: 14,
+              fontWeight: 600,
+              color: '#FFFFFF',
+              backgroundColor: '#F97316',
+              borderRadius: 12,
+              padding: '12px 24px',
+              textDecoration: 'none',
+              boxShadow: '0 4px 14px rgba(249, 115, 22, 0.25)',
+              transition: 'all 0.15s ease',
+            }}
+          >
+            <span>Go to AI Assistant</span>
+            <span>→</span>
+          </Link>
+        </div>
+      ) : (
+        /* Dynamic Grid of Saved Visual Widgets */
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(440px, 1fr))',
+            gap: 20,
+          }}
+        >
+          {savedVisualizations.map((item, index) => (
+            <ChartRenderer
+              key={`${item.config.title}-${index}`}
+              config={item.config}
+              data={item.data}
+              onRemove={() => removeVisualization(item.config.title, item.config.type)}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}

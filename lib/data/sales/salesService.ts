@@ -4,14 +4,20 @@ import type { DataRecord } from "@/lib/visualization/types";
 const FORBIDDEN_KEYWORDS_REGEX = /\b(DROP|DELETE|UPDATE|INSERT|ALTER|ATTACH|PRAGMA)\b/i;
 
 export async function executeSalesQuery(sql: string): Promise<DataRecord[]> {
-  const sanitizedSql = sql.replace(/--.*$/gm, "").replace(/\/\*[\s\S]*?\*\//g, "").trim();
-  if (!/^SELECT\b/i.test(sanitizedSql)) {
-    throw new Error("Invalid query: Query must start with SELECT.");
+  const sanitizedSql = sql
+    .replace(/```sql/gi, "")
+    .replace(/```/g, "")
+    .replace(/--.*$/gm, "")
+    .replace(/\/\*[\s\S]*?\*\//g, "")
+    .trim();
+
+  if (!/^(SELECT|WITH)\b/i.test(sanitizedSql)) {
+    throw new Error("Invalid query: Query must start with SELECT or WITH.");
   }
   if (FORBIDDEN_KEYWORDS_REGEX.test(sanitizedSql)) {
     throw new Error("Invalid query: Mutating operations are strictly prohibited.");
   }
-  console.log("🛡️ [GUARDRAIL CHECK]: Read-only SELECT validated. Running query...");
+  console.log("🛡️ [GUARDRAIL CHECK]: Read-only query (SELECT/WITH) validated. Running query...");
   const result = await db.query(sanitizedSql);
   return result.rows as DataRecord[];
 }

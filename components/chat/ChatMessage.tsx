@@ -3,76 +3,78 @@
 import React, { useState } from "react";
 import type { ChatMessage, VisualizationPayload } from "@/lib/ai/chatTypes";
 import ChartRenderer from "@/components/visualization/ChartRenderer";
+import { useSavedInsights } from "@/lib/context/SavedInsightsContext";
 
-// ─── Add to Dashboard button ──────────────────────────────────────────────────
+// ─── Save to Insights Button ──────────────────────────────────────────────────
 
-function AddToDashboardButton({
+function SaveToInsightsButton({
   messageId,
   visualization,
-  onAdd,
 }: {
   messageId: string;
   visualization: VisualizationPayload;
-  onAdd: (visualization: VisualizationPayload) => void;
 }) {
-  const [state, setState] = useState<"idle" | "added">("idle");
+  const { saveVisualization, isSaved } = useSavedInsights();
+  const alreadySaved = isSaved(visualization.config.title, visualization.config.type);
+  const [added, setAdded] = useState(alreadySaved);
 
   const handleClick = () => {
-    onAdd(visualization);
-    setState("added");
-    setTimeout(() => setState("idle"), 3000);
+    saveVisualization(visualization);
+    setAdded(true);
   };
 
-  if (state === "added") {
+  if (added || alreadySaved) {
     return (
       <div
         style={{
           display: "inline-flex",
           alignItems: "center",
-          gap: 5,
-          fontSize: 11,
+          gap: 6,
+          fontSize: 12,
           fontWeight: 600,
-          color: "#10b981",
-          padding: "5px 0",
+          color: "#12B886",
+          backgroundColor: "#E6FBF2",
+          border: "1px solid #B2F2BB",
+          borderRadius: 20,
+          padding: "6px 14px",
           userSelect: "none",
         }}
         aria-live="polite"
       >
         <span>✓</span>
-        <span>Added to Dashboard</span>
+        <span>Saved to Insights</span>
       </div>
     );
   }
 
   return (
     <button
-      id={`add-to-dashboard-${messageId}`}
+      id={`save-to-insights-${messageId}`}
       onClick={handleClick}
       style={{
         display: "inline-flex",
         alignItems: "center",
-        gap: 5,
-        fontSize: 11,
+        gap: 6,
+        fontSize: 12,
         fontWeight: 600,
-        color: "var(--accent)",
-        background: "transparent",
-        border: "1px solid var(--border)",
-        borderRadius: 6,
-        padding: "5px 10px",
+        color: "#F97316",
+        backgroundColor: "#FFF7ED",
+        border: "1px solid #FFEDD5",
+        borderRadius: 20,
+        padding: "6px 14px",
         cursor: "pointer",
-        transition: "all 0.15s",
+        transition: "all 0.15s ease",
       }}
       onMouseEnter={(e) => {
-        (e.currentTarget as HTMLButtonElement).style.background =
-          "var(--muted)";
+        (e.currentTarget as HTMLButtonElement).style.backgroundColor = "#FFEDD5";
       }}
       onMouseLeave={(e) => {
-        (e.currentTarget as HTMLButtonElement).style.background = "transparent";
+        (e.currentTarget as HTMLButtonElement).style.backgroundColor = "#FFF7ED";
       }}
-      aria-label="Add this chart to the main dashboard"
+      aria-label="Save this chart to Custom Insights canvas"
     >
       <span>＋</span>
-      <span>Add to Dashboard</span>
+      <span>Save to Insights</span>
     </button>
   );
 }
@@ -85,20 +87,21 @@ function UserBubble({ message }: { message: ChatMessage }) {
       style={{
         display: "flex",
         justifyContent: "flex-end",
-        marginBottom: 14,
+        marginBottom: 20,
         animation: "chatFadeUp 0.18s ease",
       }}
     >
       <div
         style={{
-          background: "var(--accent)",
-          color: "var(--accent-foreground)",
-          borderRadius: "16px 16px 4px 16px",
-          padding: "10px 14px",
-          maxWidth: "82%",
-          fontSize: 13,
-          lineHeight: 1.55,
+          background: "#111827",
+          color: "#FFFFFF",
+          borderRadius: "20px 20px 4px 20px",
+          padding: "12px 18px",
+          maxWidth: "80%",
+          fontSize: 14,
+          lineHeight: 1.6,
           wordBreak: "break-word",
+          boxShadow: "0 4px 14px rgba(0, 0, 0, 0.08)",
         }}
       >
         {message.content}
@@ -109,53 +112,50 @@ function UserBubble({ message }: { message: ChatMessage }) {
 
 // ─── Assistant message card ───────────────────────────────────────────────────
 
-function AssistantCard({
-  message,
-  onAddToDashboard,
-}: {
-  message: ChatMessage;
-  onAddToDashboard: (visualization: VisualizationPayload) => void;
-}) {
+function AssistantCard({ message }: { message: ChatMessage }) {
+  const [sqlOpen, setSqlOpen] = useState(false);
+
   return (
     <div
       style={{
         display: "flex",
-        gap: 10,
-        marginBottom: 16,
+        gap: 12,
+        marginBottom: 24,
         animation: "chatFadeUp 0.22s ease",
       }}
     >
       {/* AI avatar */}
       <div
         style={{
-          width: 26,
-          height: 26,
+          width: 32,
+          height: 32,
           borderRadius: "50%",
-          background: "var(--muted)",
-          border: "1px solid var(--border)",
+          background: "linear-gradient(135deg, #F97316 0%, #EA580C 100%)",
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          fontSize: 12,
+          color: "#FFFFFF",
+          fontSize: 14,
           flexShrink: 0,
           marginTop: 2,
+          boxShadow: "0 2px 8px rgba(249, 115, 22, 0.2)",
         }}
         aria-hidden="true"
       >
         ✦
       </div>
 
-      <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 10 }}>
+      <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 12 }}>
         {/* Error state */}
         {message.isError ? (
           <div
             style={{
-              background: "rgba(239,68,68,0.06)",
-              border: "1px solid rgba(239,68,68,0.2)",
-              borderRadius: "16px 16px 16px 4px",
-              padding: "10px 14px",
+              backgroundColor: "#FCE8E8",
+              border: "1px solid #F87171",
+              borderRadius: 16,
+              padding: "12px 16px",
               fontSize: 13,
-              color: "#ef4444",
+              color: "#FA5252",
               lineHeight: 1.55,
             }}
           >
@@ -163,134 +163,109 @@ function AssistantCard({
           </div>
         ) : (
           <>
-            {/* Text answer */}
+            {/* Text answer summary */}
             <div
               style={{
-                background: "var(--muted)",
-                border: "1px solid var(--border)",
-                borderRadius: "16px 16px 16px 4px",
-                padding: "11px 14px",
-                fontSize: 13,
+                backgroundColor: "#FFFFFF",
+                border: "1px solid #F1F3F5",
+                borderRadius: "4px 20px 20px 20px",
+                padding: "14px 18px",
+                fontSize: 14,
                 lineHeight: 1.65,
-                color: "var(--foreground)",
+                color: "#111827",
                 wordBreak: "break-word",
+                boxShadow: "0 4px 20px -2px rgba(0, 0, 0, 0.04)",
               }}
             >
               {message.content}
             </div>
 
-            {/* Insights list */}
-            {message.insights && message.insights.length > 0 && (
-              <ul
+            {/* SQL Query Accordion */}
+            {message.sqlQuery && (
+              <div
                 style={{
-                  margin: 0,
-                  padding: "0 0 0 4px",
-                  listStyle: "none",
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: 3,
+                  backgroundColor: "#FFFFFF",
+                  border: "1px solid #F1F3F5",
+                  borderRadius: 12,
+                  overflow: "hidden",
                 }}
               >
-                {message.insights.map((item, i) => (
-                  <li
-                    key={i}
+                <button
+                  onClick={() => setSqlOpen(!sqlOpen)}
+                  style={{
+                    width: "100%",
+                    padding: "8px 14px",
+                    background: "#F8F9FA",
+                    border: "none",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    fontSize: 12,
+                    fontWeight: 600,
+                    color: "#6B7280",
+                    cursor: "pointer",
+                  }}
+                >
+                  <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                    <code>⚡ Generated PostgreSQL Query</code>
+                  </span>
+                  <span>{sqlOpen ? "▲ Hide" : "▼ View Query"}</span>
+                </button>
+                {sqlOpen && (
+                  <pre
                     style={{
+                      margin: 0,
+                      padding: "12px 14px",
+                      backgroundColor: "#090D16",
+                      color: "#34D399",
                       fontSize: 12,
-                      color: "var(--muted-foreground)",
-                      paddingLeft: 8,
-                      borderLeft: "2px solid var(--border)",
+                      fontFamily: "monospace",
+                      overflowX: "auto",
                       lineHeight: 1.5,
                     }}
                   >
-                    {item}
-                  </li>
-                ))}
-              </ul>
+                    {message.sqlQuery}
+                  </pre>
+                )}
+              </div>
             )}
 
-            {/* Query data table */}
-            {message.queryData && message.queryData.length > 0 && (() => {
-              const columns = Array.from(
-                new Set(message.queryData.flatMap((row) => Object.keys(row)))
-              );
-              const rows = message.queryData.slice(0, 5);
-
-              return (
-                <div
+            {/* Insights list */}
+            {message.insights && message.insights.length > 0 && (
+              <div
+                style={{
+                  backgroundColor: "#FFFFFF",
+                  border: "1px solid #F1F3F5",
+                  borderRadius: 16,
+                  padding: "14px 18px",
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: 8,
+                  boxShadow: "0 4px 20px -2px rgba(0, 0, 0, 0.04)",
+                }}
+              >
+                <div style={{ fontSize: 12, fontWeight: 700, color: '#F97316', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                  Key Data Insights
+                </div>
+                <ul
                   style={{
-                    background: "rgba(15,23,42,0.02)",
-                    border: "1px solid var(--border)",
-                    borderRadius: 12,
-                    overflow: "hidden",
+                    margin: 0,
+                    paddingLeft: 18,
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: 6,
                   }}
                 >
-                  <div
-                    style={{
-                      padding: "10px 12px",
-                      fontSize: 11,
-                      fontWeight: 700,
-                      color: "var(--muted-foreground)",
-                      letterSpacing: "0.04em",
-                      textTransform: "uppercase",
-                      borderBottom: "1px solid var(--border)",
-                      background: "rgba(148,163,184,0.05)",
-                    }}
-                  >
-                    Query data
-                  </div>
-                  <div style={{ overflowX: "auto" }}>
-                    <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
-                      <thead>
-                        <tr>
-                          {columns.map((column) => (
-                            <th
-                              key={column}
-                              style={{
-                                textAlign: "left",
-                                padding: "8px 10px",
-                                borderBottom: "1px solid var(--border)",
-                                color: "var(--muted-foreground)",
-                                background: "rgba(148,163,184,0.04)",
-                                fontWeight: 600,
-                                whiteSpace: "nowrap",
-                              }}
-                            >
-                              {column}
-                            </th>
-                          ))}
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {rows.map((row, rowIndex) => (
-                          <tr key={rowIndex}>
-                            {columns.map((column) => {
-                              const value = row[column];
-                              const displayValue = value === null || value === undefined ? "—" : String(value);
-                              return (
-                                <td
-                                  key={`${rowIndex}-${column}`}
-                                  style={{
-                                    padding: "8px 10px",
-                                    borderBottom: rowIndex === rows.length - 1 ? "none" : "1px solid var(--border)",
-                                    color: "var(--foreground)",
-                                    verticalAlign: "top",
-                                    whiteSpace: "nowrap",
-                                  }}
-                                >
-                                  {displayValue}
-                                </td>
-                              );
-                            })}
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              );
-            })()}
+                  {message.insights.map((item, i) => (
+                    <li key={i} style={{ fontSize: 13, color: "#4B5563", lineHeight: 1.5 }}>
+                      {item}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
 
-            {/* Embedded chart */}
+            {/* Embedded ECharts Visualization */}
             {message.visualization && (
               <ChartRenderer
                 config={message.visualization.config}
@@ -298,13 +273,12 @@ function AssistantCard({
               />
             )}
 
-            {/* Add to Dashboard action */}
-            {message.canAddToDashboard && message.visualization && (
-              <div>
-                <AddToDashboardButton
+            {/* Save to Insights action */}
+            {message.visualization && (
+              <div style={{ marginTop: 2 }}>
+                <SaveToInsightsButton
                   messageId={message.id}
                   visualization={message.visualization}
-                  onAdd={onAddToDashboard}
                 />
               </div>
             )}
@@ -319,22 +293,16 @@ function AssistantCard({
 
 interface ChatMessageProps {
   message: ChatMessage;
-  onAddToDashboard: (visualization: VisualizationPayload) => void;
+  onAddToDashboard?: (visualization: VisualizationPayload) => void;
 }
 
-/**
- * Renders a single conversation message.
- *
- * User messages: right-aligned accent bubble.
- * Assistant messages: left-aligned card with optional chart + insights + action.
- */
-export default function ChatMessageItem({ message, onAddToDashboard }: ChatMessageProps) {
+export default function ChatMessageItem({ message }: ChatMessageProps) {
   return (
     <>
       {message.role === "user" ? (
         <UserBubble message={message} />
       ) : (
-        <AssistantCard message={message} onAddToDashboard={onAddToDashboard} />
+        <AssistantCard message={message} />
       )}
       <style>{`
         @keyframes chatFadeUp {
@@ -345,3 +313,4 @@ export default function ChatMessageItem({ message, onAddToDashboard }: ChatMessa
     </>
   );
 }
+

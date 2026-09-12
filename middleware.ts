@@ -7,10 +7,13 @@ export async function middleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
 
   const protectedPath =
+    pathname === "/" ||
     pathname.startsWith("/dashboard") ||
+    pathname.startsWith("/chat") ||
+    pathname.startsWith("/insights") ||
     pathname.startsWith("/api/chat") ||
     pathname.startsWith("/api/sales");
-  const authPage = pathname === "/login" || pathname === "/register";
+  const authPage = pathname === "/login" || pathname === "/register" || pathname === "/signup";
 
   if (protectedPath && !session) {
     if (pathname.startsWith("/api/")) {
@@ -29,9 +32,15 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
+    "/",
     "/dashboard/:path*",
+    "/chat/:path*",
+    "/chat",
+    "/insights/:path*",
+    "/insights",
     "/login",
     "/register",
+    "/signup",
     "/api/chat/:path*",
     "/api/sales/:path*",
   ],

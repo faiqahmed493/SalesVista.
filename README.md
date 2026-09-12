@@ -1,36 +1,138 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Sales Intelligence Dashboard
 
-## Getting Started
+An authenticated sales business-intelligence dashboard built with Next.js, PostgreSQL, and React. It provides KPI cards, sales charts, and an AI assistant that converts natural-language questions into read-only SQL queries and visualizations.
 
-First, run the development server:
+## Features
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+- Sales KPIs: total sales, total profit, order count, and average discount.
+- Sales-by-category and monthly sales/profit charts.
+- Natural-language Text-to-SQL assistant with chart generation.
+- PostgreSQL star-schema data model based on the Superstore dataset.
+- JWT authentication for dashboard and API access.
+- Read-only SQL guardrails for AI-generated queries.
+- Seed script for loading `data/superstore.csv`.
+
+## Tech Stack
+
+- Next.js 16 with App Router
+- React 19 and TypeScript
+- PostgreSQL with `pg`
+- ECharts and Recharts
+- Google Gemini, with Groq and OpenRouter fallback providers
+- JWT authentication using `jose`
+
+## Project Structure
+
+```text
+app/
+  api/
+    auth/       Authentication endpoints
+    chat/       AI Text-to-SQL endpoint
+    sales/      Dashboard data endpoint
+  dashboard/    Authenticated dashboard page
+  login/        Login page
+  register/     Registration page
+components/    Dashboard, chat, chart, and UI components
+lib/
+  ai/           Prompting, providers, and response validation
+  auth/         JWT and session helpers
+  data/sales/   PostgreSQL connection and sales queries
+  visualization/Chart types and rendering helpers
+scripts/        Database seeding script
+data/           Superstore CSV source data
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Requirements
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+- Node.js 20 or newer
+- PostgreSQL database
+- An AI provider API key
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Setup
 
-## Learn More
+1. Install dependencies:
 
-To learn more about Next.js, take a look at the following resources:
+   ```bash
+   npm install
+   ```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+2. Create `.env.local` in the project root:
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+   ```env
+   DATABASE_URL=postgresql://user:password@localhost:5432/sales
+   GEMINI_API_KEY=your_gemini_api_key
+   JWT_SECRET=replace_with_a_long_random_secret
+   ```
 
-## Deploy on Vercel
+   Optional fallback providers:
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+   ```env
+   GROQ_API_KEY=your_groq_api_key
+   OPENROUTER_API_KEY=your_openrouter_api_key
+   GEMINI_MODEL=gemini-2.5-flash
+   GROQ_MODEL=openai/gpt-oss-20b
+   OPENROUTER_MODEL=openrouter/free
+   ```
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+3. Initialize and load the Superstore data:
+
+   ```bash
+   npm run seed
+   ```
+
+4. Start the development server:
+
+   ```bash
+   npm run dev
+   ```
+
+5. Open `http://localhost:3000`, register an account, and sign in.
+
+## Available Scripts
+
+| Command | Description |
+| --- | --- |
+| `npm run dev` | Start the development server |
+| `npm run build` | Create a production build |
+| `npm run start` | Start the production server |
+| `npm run lint` | Run ESLint |
+| `npm run seed` | Initialize and repopulate the sales database |
+
+## API Endpoints
+
+| Method | Endpoint | Description |
+| --- | --- | --- |
+| `POST` | `/api/auth/register` | Create an account |
+| `POST` | `/api/auth/login` | Authenticate and create a session |
+| `POST` | `/api/auth/logout` | End the current session |
+| `GET` | `/api/sales` | Return dashboard KPIs and chart data |
+| `POST` | `/api/chat` | Generate and execute a validated read-only sales query |
+
+All dashboard, sales, and chat endpoints require an authenticated session.
+
+## Data Model
+
+The database contains:
+
+- `categories`
+- `customers`
+- `locations`
+- `products`
+- `orders`
+
+The `orders` table stores order dates, shipping information, customer/location/product references, sales, quantity, discount, and profit.
+
+## SQL Safety
+
+AI-generated SQL must be a `SELECT` query. Mutating keywords such as `INSERT`, `UPDATE`, `DELETE`, `DROP`, and `ALTER` are rejected before execution.
+
+## Validation
+
+Run these commands before deployment:
+
+```bash
+npm run lint
+npm run build
+```
+
+The project currently has pre-existing lint and TypeScript issues in visualization files unrelated to this documentation.

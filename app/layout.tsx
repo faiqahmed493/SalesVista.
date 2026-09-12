@@ -1,31 +1,36 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Inter } from "next/font/google";
 import "./globals.css";
+import { SavedInsightsProvider } from "@/lib/context/SavedInsightsContext";
+import LayoutShell from "@/components/navigation/LayoutShell";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+const inter = Inter({
   subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
+  variable: "--font-inter",
 });
 
 export const metadata: Metadata = {
-  title: "Weather Analytics Dashboard",
-  description:
-    "Real-time weather intelligence and forecast analytics powered by Open-Meteo.",
+  title: "SalesVista - Executive Sales Analytics & AI Dashboard",
+  description: "Executive sales analytics, AI query pipeline, and custom insights canvas.",
 };
 
-export default function RootLayout({ children }: LayoutProps<"/">) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html
-      lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
-    > 
-      <body className="min-h-full flex flex-col">{children}</body>
-
+    <html lang="en" className={`${inter.variable} h-full antialiased`}>
+      <body
+        style={{
+          margin: 0,
+          padding: 0,
+          backgroundColor: "#F8F9FA",
+          fontFamily: "var(--font-inter), system-ui, -apple-system, sans-serif",
+          color: "#111827",
+          minHeight: "100vh",
+        }}
+      >
+        <SavedInsightsProvider>
+          <LayoutShell>{children}</LayoutShell>
+        </SavedInsightsProvider>
+      </body>
     </html>
   );
 }

@@ -85,20 +85,28 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* ─── Skeleton animation ─────────────────────────────────────────────────── */
+/* ─── Skeleton animation & manual color variables ─────────────────────────── */
+
+:root {
+  /* 🎨 CHANGE SKELETON COLORS MANUALLY HERE: */
+  --skeleton-base: #e2e8f0;     /* Default gray color */
+  --skeleton-pulse: #cbd5e1;    /* Animated highlight gray color */
+}
 
 @keyframes skeleton-pulse {
   0%,
   100% {
-    opacity: 0.4;
+    background-color: var(--skeleton-base);
+    opacity: 0.6;
   }
   50% {
-    opacity: 0.8;
+    background-color: var(--skeleton-pulse);
+    opacity: 1;
   }
 }
 
 .skeleton {
-  background-color: var(--muted);
+  background-color: var(--skeleton-base);
   border-radius: 6px;
   animation: skeleton-pulse 1.6s ease-in-out infinite;
 }

@@ -18,7 +18,18 @@ import type { ValidationResult } from "./types";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const ALLOWED_CHART_TYPES = ["line", "bar", "area", "pie", "composed"] as const;
+const ALLOWED_CHART_TYPES = [
+  "line",
+  "bar",
+  "area",
+  "pie",
+  "donut",
+  "composed",
+  "scatter",
+  "radar",
+  "funnel",
+  "boxplot",
+] as const;
 const ALLOWED_SERIES_CHART_TYPES = ["line", "bar", "area"] as const;
 
 /**

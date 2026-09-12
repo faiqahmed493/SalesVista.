@@ -1,3 +1,5 @@
+import { CHART_GENERATION_PROMPT } from "./prompts";
+
 /**
  * System prompt builder for the Sales BI Text-to-SQL AI assistant.
  * Passes the complete Superstore PostgreSQL DDL schema and instructs the model
@@ -5,7 +7,7 @@
  */
 
 export function buildSystemPrompt(): string {
-  return `You are an expert SQL Data Analyst assistant for an internal Sales Business Intelligence (BI) Dashboard powered by PostgreSQL.
+  return `${CHART_GENERATION_PROMPT}
 
 DATABASE SCHEMA:
 The database uses a Star Schema populated with the Superstore dataset across 5 tables:
@@ -54,7 +56,7 @@ The database uses a Star Schema populated with the Superstore dataset across 5 t
    - FOREIGN KEY (product_id) REFERENCES products(product_id)
 
 SQL GENERATION RULES:
-1. Generate ONLY valid, read-only PostgreSQL SELECT queries using proper JOINs and aggregations.
+1. Generate ONLY valid, read-only PostgreSQL SELECT queries (including CTE queries starting with WITH ... SELECT) using proper JOINs and aggregations.
 2. Mandatory JOIN paths:
    - To query product category or subcategory: JOIN products p ON o.product_id = p.product_id JOIN categories c ON p.category_id = c.category_id
    - To query customer name or segment: JOIN customers cust ON o.customer_id = cust.customer_id
@@ -73,14 +75,21 @@ Respond with ONLY a valid JSON object adhering strictly to the following schema.
   "sqlQuery": "The exact PostgreSQL SELECT query string",
   "shouldVisualize": true,
   "visualization": {
-    "type": "bar" | "line" | "area" | "pie",
-    "title": "Short title for the chart (max 60 chars)",
-    "xKey": "Exact column alias from sqlQuery used for the X-axis (e.g. category, month, region, state)",
+    "type": "line" | "bar" | "area" | "pie" | "donut" | "composed" | "scatter" | "radar" | "funnel",
+    "title": "Short descriptive title (max 60 chars)",
+    "description": "Optional 1-sentence insight",
+    "xKey": "Exact column alias from sqlQuery used for the X-axis or dimensions (e.g. category, month, region, state)",
+    "unit": "$ | % | items",
+    "height": 300,
+    "stacked": false,
+    "legend": true,
     "series": [
       {
         "key": "Exact column alias from sqlQuery used for Y values (e.g. sales, profit)",
-        "label": "Human readable label (e.g. Total Sales ($))",
-        "color": "#3b82f6"
+        "label": "Human Readable Label",
+        "color": "#hexColor",
+        "chartType": "line" | "bar" | "area",
+        "dashed": false
       }
     ]
   },
@@ -90,10 +99,10 @@ Respond with ONLY a valid JSON object adhering strictly to the following schema.
   ]
 }
 
-VISUALIZATION TYPE GUIDELINES:
-- "bar": Default for comparisons across discrete categories, regions, customer segments, or top N states/products.
-- "line" or "area": Use for time-series trends over months or years (where xKey is 'month' or 'year').
-- "pie": Use ONLY for small part-to-whole segment breakdowns (e.g. sales by segment or region).
+VISUALIZATION TYPE & COLOR GUIDELINES:
+- Use optimal chart types based on data semantics (line for continuous time trends, bar for discrete category comparisons, donut/pie for part-to-whole 3-7 categories, composed for mixed metrics, scatter for two continuous variables, radar for multi-variable profile, funnel for conversion drops).
+- Apply rich color palette guidelines: Assign vibrant, distinct colors per metric/series (Sales: #3B82F6 Electric Blue, Profit: #10B981 Emerald Green, Margin/Ratio: #8B5CF6 Violet Purple, Target/Discount: #F59E0B Amber Gold, Loss/Dropoff: #EF4444 Crimson Red, Slices/Categories: #06B6D4 Cyan, #EC4899 Rose, #F97316 Coral, #6366F1 Indigo). Vary colors across different charts so the dashboard feels visually alive.
 - If the query returns a single aggregate row (e.g. COUNT(*)), set "shouldVisualize" to false and omit "visualization".
 `;
 }
+

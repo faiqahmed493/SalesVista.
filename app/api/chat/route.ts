@@ -83,7 +83,6 @@ const PROVIDER_POOL: ProviderConfig[] = [
 ];
 
 function parseBody(body: unknown): ChatRequestBody | null {
-
   if (typeof body !== "object" || body === null) return null;
   const value = body as Record<string, unknown>;
   if (typeof value.message !== "string" || !value.message.trim()) return null;
@@ -91,13 +90,12 @@ function parseBody(body: unknown): ChatRequestBody | null {
 }
 
 export async function POST(request: NextRequest): Promise<Response> {
-
   const session = await getSession();
 
   if (!session) {
     return Response.json({ error: "Unauthorized" }, { status: 401 });
   }
-  
+
   let body: unknown;
   try {
     body = await request.json();
