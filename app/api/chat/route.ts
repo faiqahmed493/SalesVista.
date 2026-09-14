@@ -195,6 +195,9 @@ export async function POST(request: NextRequest): Promise<Response> {
     let visualization: ChatApiResponse["visualization"];
     if (response.shouldVisualize && response.visualization && queryData.length > 0) {
       visualization = reconcileVisualization(response.visualization, queryData) ?? undefined;
+      if (visualization && response.sqlQuery) {
+        visualization.sqlQuery = response.sqlQuery;
+      }
     }
     
     console.log('className [6. RECONCILIATION]: Validating chart keys match returned DB columns ->', visualization ? 'SUCCESS' : 'FAILED / NO CHART');

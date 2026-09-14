@@ -6,6 +6,7 @@ import type { VisualizationPayload } from '@/lib/ai/chatTypes';
 interface SavedInsightsContextType {
   savedVisualizations: VisualizationPayload[];
   saveVisualization: (visualization: VisualizationPayload) => void;
+  updateVisualizationData: (title: string, newData: any[], type?: string) => void;
   removeVisualization: (title: string, type?: string) => void;
   isSaved: (title: string, type?: string) => boolean;
 }
@@ -71,22 +72,24 @@ export const SavedInsightsProvider: React.FC<{ children: React.ReactNode }> = ({
     }
   }, []);
 
-  // Save visualization with strict duplicate prevention
+  // Save visualization with strict duplicate prevention & update existing
   const saveVisualization = (visualization: VisualizationPayload) => {
     if (!visualization || !visualization.config || !visualization.config.title) return;
 
     setSavedVisualizations((current) => {
-      // Check if widget with same normalized title and type already exists
-      const exists = current.some((item) =>
+      const existsIndex = current.findIndex((item) =>
         isSameWidget(item, visualization.config.title, visualization.config.type)
       );
 
-      if (exists) {
-        // Already saved; do not add duplicate
-        return current;
+      let updated: VisualizationPayload[];
+      if (existsIndex !== -1) {
+        // Merge & update existing saved item (updating data/sqlQuery)
+        updated = [...current];
+        updated[existsIndex] = { ...updated[existsIndex], ...visualization };
+      } else {
+        updated = [visualization, ...current];
       }
 
-      const updated = [visualization, ...current];
       const cleaned = deduplicateVisualizations(updated);
 
       try {
@@ -95,6 +98,26 @@ export const SavedInsightsProvider: React.FC<{ children: React.ReactNode }> = ({
         console.warn('Failed to save insight to localStorage:', e);
       }
       return cleaned;
+    });
+  };
+
+  // Update chart data for a specific saved visualization
+  const updateVisualizationData = (title: string, newData: any[], type?: string) => {
+    if (!title || !newData) return;
+
+    setSavedVisualizations((current) => {
+      const updated = current.map((item) => {
+        if (isSameWidget(item, title, type)) {
+          return { ...item, data: newData };
+        }
+        return item;
+      });
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+      } catch (e) {
+        console.warn('Failed to update visualization data in localStorage:', e);
+      }
+      return updated;
     });
   };
 
@@ -124,6 +147,7 @@ export const SavedInsightsProvider: React.FC<{ children: React.ReactNode }> = ({
       value={{
         savedVisualizations,
         saveVisualization,
+        updateVisualizationData,
         removeVisualization,
         isSaved,
       }}

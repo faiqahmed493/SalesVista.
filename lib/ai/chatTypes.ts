@@ -19,6 +19,7 @@ export type MessageRole = "user" | "assistant";
 export interface VisualizationPayload {
   config: VisualizationConfig;
   data: DataRecord[];
+  sqlQuery?: string;
 }
 
 /**

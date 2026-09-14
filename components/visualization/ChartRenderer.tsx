@@ -754,6 +754,7 @@ export interface ChartRendererProps {
   data: DataRecord[];
   isDark?: boolean;
   onRemove?: () => void;
+  lastRefreshed?: Date | null;
   className?: string;
 }
 
@@ -762,6 +763,7 @@ export default function ChartRenderer({
   data,
   isDark = false,
   onRemove,
+  lastRefreshed,
   className,
 }: ChartRendererProps) {
   const height = Math.max(120, Math.min(1000, config.height ?? 300));
@@ -817,6 +819,7 @@ export default function ChartRenderer({
         description={config.description}
         theme={theme}
         onRemove={onRemove}
+        lastRefreshed={lastRefreshed}
       >
         {config.isLoading ? (
           <div

@@ -30,15 +30,14 @@ export interface LLMResponse {
   insights?: string[];
 }
 
+import type { VisualizationPayload } from "@/lib/ai/chatTypes";
+
 export interface ChatApiResponse {
   answer: string;
   sqlQuery?: string;
   queryData?: DataRecord[];
   shouldVisualize: boolean;
-  visualization?: {
-    config: VisualizationConfig;
-    data: DataRecord[];
-  };
+  visualization?: VisualizationPayload;
   insights?: string[];
   canAddToDashboard: boolean;
   mode: "live" | "mock";

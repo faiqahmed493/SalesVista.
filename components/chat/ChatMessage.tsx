@@ -102,7 +102,6 @@ function UserBubble({ message }: { message: ChatMessage }) {
           fontSize: 14,
           lineHeight: 1.6,
           wordBreak: "break-word",
-          boxShadow: "0 4px 16px rgba(249, 115, 22, 0.28)",
         }}
       >
         {message.content}
@@ -135,15 +134,22 @@ function AssistantCard({ message }: { message: ChatMessage }) {
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          color: "#FFFFFF",
-          fontSize: 14,
           flexShrink: 0,
           marginTop: 2,
-          boxShadow: "0 2px 8px rgba(249, 115, 22, 0.2)",
+          overflow: "hidden",
         }}
         aria-hidden="true"
       >
-        ✦
+        <img
+          src="/icon.png"
+          alt="AI Assistant"
+          style={{
+            width: 18,
+            height: 18,
+            objectFit: "contain",
+            filter: "brightness(0) invert(1)",
+          }}
+        />
       </div>
 
       <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 12 }}>
@@ -279,7 +285,10 @@ function AssistantCard({ message }: { message: ChatMessage }) {
               <div style={{ marginTop: 2 }}>
                 <SaveToInsightsButton
                   messageId={message.id}
-                  visualization={message.visualization}
+                  visualization={{
+                    ...message.visualization,
+                    sqlQuery: message.sqlQuery || message.visualization.sqlQuery,
+                  }}
                 />
               </div>
             )}
