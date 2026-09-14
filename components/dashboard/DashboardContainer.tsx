@@ -104,7 +104,7 @@ export default function DashboardContainer({ initialData }: DashboardContainerPr
               {/* 3. Total Transactions Card */}
               <StatCard
                 title="Total Orders"
-                metric={kpis ? `${kpis.totalOrders.toLocaleString()}` : '12,968'}
+                metric={kpis ? `${kpis.totalOrders.toLocaleString()}` : '$0'}
                 isPositive={false}
                 iconBgColor="#FFF7ED"
                 iconColor="#F97316"
