@@ -10,8 +10,9 @@ import {
  */
 export default function DashboardLoading() {
   return (
-    <div style={{ padding: "24px 16px 48px", maxWidth: 1400, margin: "0 auto" }}>
+    <div className="dashboard-container" style={{ padding: "24px 16px 48px", maxWidth: 1400, margin: "0 auto" }}>
       <div
+        className="dashboard-layout"
         style={{
           display: "grid",
           gridTemplateColumns: "minmax(0, 8fr) minmax(0, 4fr)",
@@ -22,7 +23,7 @@ export default function DashboardLoading() {
         {/* Left Parent Container */}
         <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
           {/* Row 1: 3 KPI Cards */}
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 14 }}>
+          <div className="dashboard-kpis" style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 14 }}>
             <KpiCardSkeleton />
             <KpiCardSkeleton />
             <KpiCardSkeleton />

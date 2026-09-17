@@ -127,3 +127,51 @@ body {
   scrollbar-width: thin;
   scrollbar-color: var(--border) transparent;
 }
+
+@media (max-width: 900px) {
+  .dashboard-layout {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+
+  .dashboard-kpis {
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  }
+}
+
+@media (max-width: 640px) {
+  .app-sidebar {
+    display: none !important;
+  }
+
+  .app-sidebar.mobile-sidebar-open {
+    display: flex !important;
+    box-shadow: 12px 0 30px rgba(15, 23, 42, 0.12);
+  }
+
+  .mobile-sidebar-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 45;
+    width: 100%;
+    border: 0;
+    background: rgba(15, 23, 42, 0.32);
+  }
+
+  .mobile-menu-button {
+    display: flex !important;
+  }
+
+  .app-content {
+    margin-left: 0 !important;
+    width: 100%;
+  }
+
+  .dashboard-container {
+    padding: 16px 12px 32px !important;
+  }
+
+  .dashboard-kpis {
+    grid-template-columns: 1fr !important;
+    gap: 12px !important;
+  }
+}

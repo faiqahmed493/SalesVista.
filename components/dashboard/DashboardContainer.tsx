@@ -21,8 +21,6 @@ export default function DashboardContainer({ initialData }: DashboardContainerPr
   const [data, setData] = useState<SalesDashboardData | null>(initialData);
   const [isLoading, setIsLoading] = useState(!initialData);
 
-  console.log("data",data)
-
   useEffect(() => {
     let isMounted = true;
     if (!initialData) {
@@ -45,13 +43,12 @@ export default function DashboardContainer({ initialData }: DashboardContainerPr
   }, [initialData]);
 
   const kpis = data?.kpis;
-  console.log("hhhg",kpis)
-  
   return (
-    <div style={{ padding: '24px 16px 48px', maxWidth: 1400, margin: '0 auto' }}>
+    <div className="dashboard-container" style={{ padding: '24px 16px 48px', maxWidth: 1400, margin: '0 auto' }}>
       {/* Parent 2-Column Grid (Left ~68% [8fr], Right ~32% [4fr]) */}
       <div
-        style={{
+          className="dashboard-layout"
+          style={{
           display: 'grid',
           gridTemplateColumns: 'minmax(0, 8fr) minmax(0, 4fr)',
           gap: 24,
@@ -62,13 +59,13 @@ export default function DashboardContainer({ initialData }: DashboardContainerPr
         <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
           {/* Row 1 (Top): 3 KPI Cards Subgrid */}
           {isLoading && !data ? (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 14 }}>
+            <div className="dashboard-kpis" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 14 }}>
               <KpiCardSkeleton />
               <KpiCardSkeleton />
               <KpiCardSkeleton />
             </div>
           ) : (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 14 }}>
+            <div className="dashboard-kpis" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 14 }}>
               {/* 1. Total Sales Card */}
               <StatCard
                 title="Total Sales"

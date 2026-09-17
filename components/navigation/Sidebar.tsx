@@ -5,7 +5,12 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { SalesVistaLogo } from '@/components/common/BrandLogo';
 
-export default function Sidebar() {
+interface SidebarProps {
+  isMobileMenuOpen: boolean;
+  onClose: () => void;
+}
+
+export default function Sidebar({ isMobileMenuOpen, onClose }: SidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
   const [user, setUser] = useState<{ name: string; email?: string } | null>(null);
@@ -86,7 +91,17 @@ export default function Sidebar() {
   const displayInitials = user?.name ? getInitials(user.name) : '..';
 
   return (
-    <aside
+    <>
+      {isMobileMenuOpen && (
+        <button
+          className="mobile-sidebar-backdrop"
+          type="button"
+          onClick={onClose}
+          aria-label="Close navigation menu"
+        />
+      )}
+      <aside
+      className={`app-sidebar${isMobileMenuOpen ? ' mobile-sidebar-open' : ''}`}
       style={{
         width: 220,
         height: '100vh',
@@ -120,6 +135,7 @@ export default function Sidebar() {
             <Link
               key={item.href}
               href={item.href}
+              onClick={onClose}
               style={{
                 display: 'flex',
                 alignItems: 'center',
@@ -225,6 +241,7 @@ export default function Sidebar() {
           </svg>
         </button>
       </div>
-    </aside>
+      </aside>
+    </>
   );
 }
