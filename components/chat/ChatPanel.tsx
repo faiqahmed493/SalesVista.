@@ -305,9 +305,10 @@ export default function ChatPanel({
           padding: "16px 14px 4px",
           display: "flex",
           flexDirection: "column",
-          scrollbarWidth: "thin",
-          scrollbarColor: "var(--border) transparent",
+          scrollbarWidth: "none",
+          msOverflowStyle: "none",
         }}
+        className="no-scrollbar"
         aria-live="polite"
         aria-label="Conversation"
       >

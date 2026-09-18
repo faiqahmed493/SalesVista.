@@ -4,6 +4,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import type { ChatMessage } from '@/lib/ai/chatTypes';
 import ChatMessageItem from '@/components/chat/ChatMessage';
 import TypingIndicator from '@/components/chat/TypingIndicator';
+import ChatInput from '@/components/chat/ChatInput';
 import { usePersistedChat } from '@/lib/hooks/usePersistedChat';
 
 const SUGGESTED_QUESTIONS = [
@@ -14,8 +15,7 @@ const SUGGESTED_QUESTIONS = [
 ];
 
 export default function ChatPage() {
-  const { messages, setMessages, clearMessages, isHydrated, todayDate } = usePersistedChat('main');
-  const [input, setInput] = useState('');
+  const { messages, setMessages, clearMessages, todayDate } = usePersistedChat('main');
   const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -27,8 +27,8 @@ export default function ChatPage() {
     scrollToBottom();
   }, [messages, isLoading]);
 
-  const handleSendMessage = async (queryText?: string) => {
-    const textToSend = (queryText || input).trim();
+  const handleSendMessage = async (queryText: string) => {
+    const textToSend = queryText.trim();
     if (!textToSend || isLoading) return;
 
     const userMessage: ChatMessage = {
@@ -39,7 +39,6 @@ export default function ChatPage() {
     };
 
     setMessages((prev) => [...prev, userMessage]);
-    if (!queryText) setInput('');
     setIsLoading(true);
 
     try {
@@ -85,16 +84,7 @@ export default function ChatPage() {
   };
 
   return (
-    <div
-      style={{
-        maxWidth: 860,
-        margin: '0 auto',
-        padding: '24px 20px 140px',
-        display: 'flex',
-        flexDirection: 'column',
-        minHeight: 'calc(100vh - 60px)',
-      }}
-    >
+    <div className="chat-page-wrapper">
       {/* Empty conversation welcome state */}
       {messages.length === 0 && (
         <div
@@ -103,37 +93,36 @@ export default function ChatPage() {
             flexDirection: 'column',
             alignItems: 'center',
             justifyContent: 'center',
-            margin: '48px 0 32px',
+            margin: '32px 0 24px',
             textAlign: 'center',
           }}
         >
-          {/* <div
+          <h1
             style={{
-              width: 54,
-              height: 54,
-              borderRadius: '50%',
-              background: 'linear-gradient(135deg, #F97316 0%, #EA580C 100%)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              color: '#FFFFFF',
-              fontSize: 24,
-              marginBottom: 16,
-              // boxShadow: '0 8px 24px rgba(249, 115, 22, 0.25)',
+              fontSize: 22,
+              fontWeight: 800,
+              color: '#111827',
+              margin: '0 0 8px',
+              letterSpacing: '-0.02em',
             }}
           >
-            ✦
-          </div> */}
-          <h1 style={{ fontSize: 22, fontWeight: 800, color: '#111827', margin: '0 0 8px', letterSpacing: '-0.02em' }}>
             AI Analytics Assistant
           </h1>
-          <p style={{ fontSize: 14, color: '#6B7280', maxWidth: 480, margin: 0, lineHeight: 1.6 }}>
+          <p
+            style={{
+              fontSize: 14,
+              color: '#6B7280',
+              maxWidth: 480,
+              margin: 0,
+              lineHeight: 1.6,
+            }}
+          >
             Ask plain-English questions to query your PostgreSQL Sales database, generate ECharts visual widgets, and pin custom insights.
           </p>
 
           {/* Suggested Query Chips */}
-          <div style={{ marginTop: 32, display: 'flex', flexDirection: 'column', gap: 10, width: '100%', maxWidth: 560 }}>
-            <div style={{ fontSize: 12, fontWeight: 600, color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+          <div style={{ marginTop: 28, display: 'flex', flexDirection: 'column', gap: 10, width: '100%', maxWidth: 560 }}>
+            <div style={{ fontSize: 11, fontWeight: 700, color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
               Suggested Analytics Queries
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -141,6 +130,7 @@ export default function ChatPage() {
                 <button
                   key={idx}
                   onClick={() => handleSendMessage(q)}
+                  disabled={isLoading}
                   style={{
                     backgroundColor: '#FFFFFF',
                     border: '1px solid #F1F3F5',
@@ -189,9 +179,11 @@ export default function ChatPage() {
             backgroundColor: '#F9FAFB',
             border: '1px solid #F3F4F6',
             borderRadius: 12,
+            flexWrap: 'wrap',
+            gap: 8,
           }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
             <span style={{ fontSize: 13, fontWeight: 600, color: '#374151' }}>
               Today's Conversation ({todayDate})
             </span>
@@ -205,7 +197,7 @@ export default function ChatPage() {
                 borderRadius: 10,
               }}
             >
-              Persisted for 1 day • Resets tomorrow
+              Persisted for 1 day
             </span>
           </div>
           <button
@@ -249,81 +241,13 @@ export default function ChatPage() {
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Fixed Bottom Claude-Style Prompt Input */}
-      <div
-        style={{
-          position: 'fixed',
-          bottom: 24,
-          left: 'calc(240px + (100% - 240px) / 2)',
-          transform: 'translateX(-50%)',
-          width: 'calc(100% - 280px)',
-          maxWidth: 820,
-          zIndex: 30,
-        }}
-      >
-        <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            handleSendMessage();
-          }}
-          style={{
-            backgroundColor: '#FFFFFF',
-            border: '1px solid #E5E7EB',
-            borderRadius: 14,
-            padding: '10px 14px 10px 20px',
-            boxShadow: '0 12px 36px -4px rgba(0, 0, 0, 0.08), 0 4px 12px rgba(0, 0, 0, 0.03)',
-            display: 'flex',
-            alignItems: 'center',
-            gap: 12,
-          }}
-        >
-          <textarea
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault();
-                handleSendMessage();
-              }
-            }}
-            placeholder="Ask a sales BI question... (e.g., Donut chart of top profit categories)"
-            rows={1}
-            style={{
-              flex: 1,
-              border: 'none',
-              outline: 'none',
-              resize: 'none',
-              fontSize: 14,
-              fontFamily: 'inherit',
-              color: '#111827',
-              backgroundColor: 'transparent',
-              maxHeight: 120,
-              lineHeight: 1.5,
-            }}
-          />
-          <button
-            type="submit"
-            disabled={!input.trim() || isLoading}
-            style={{
-              width: 38,
-              height: 38,
-              borderRadius: '50%',
-              backgroundColor: input.trim() && !isLoading ? '#F97316' : '#E5E7EB',
-              color: '#FFFFFF',
-              border: 'none',
-              cursor: input.trim() && !isLoading ? 'pointer' : 'not-allowed',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              fontSize: 16,
-              transition: 'all 0.15s ease',
-              flexShrink: 0,
-            }}
-          >
-            ↑
-          </button>
-        </form>
-      </div>
+      {/* Fixed/Sticky Responsive Prompt Input Component */}
+      <ChatInput
+        variant="sticky"
+        onSend={handleSendMessage}
+        disabled={isLoading}
+        placeholder="Ask a sales BI question... (e.g., Donut chart of top profit categories)"
+      />
     </div>
   );
 }
