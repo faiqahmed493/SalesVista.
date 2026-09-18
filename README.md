@@ -136,3 +136,22 @@ npm run build
 ```
 
 The project currently has pre-existing lint and TypeScript issues in visualization files unrelated to this documentation.
+
+## Run with Docker
+
+1. Make sure Docker Desktop is running.
+2. Keep `.env.local` in the project root and set at least `JWT_SECRET` and an AI provider key. Do not commit this file.
+3. Build and start the application:
+
+   ```powershell
+   docker compose up --build
+   ```
+
+4. Open `http://localhost:3000`.
+5. Stop the containers with `Ctrl+C`, or run:
+
+   ```powershell
+   docker compose down
+   ```
+
+Docker uses the `DATABASE_URL` from `.env.local`, so it connects to the same PostgreSQL database as the non-Docker application. The repository currently does not contain the referenced `scripts/seed-sales.ts` or `data/superstore.csv`; the local schema in `database/init.sql` is available if a local database and data import are restored later.
