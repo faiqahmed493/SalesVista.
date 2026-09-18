@@ -17,7 +17,7 @@ An authenticated sales business-intelligence dashboard built with Next.js, Postg
 - Next.js 16 with App Router
 - React 19 and TypeScript
 - PostgreSQL with `pg`
-- ECharts and Recharts
+- ECharts
 - Google Gemini, with Groq and OpenRouter fallback providers
 - JWT authentication using `jose`
 
